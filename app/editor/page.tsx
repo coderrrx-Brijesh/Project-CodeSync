@@ -10,20 +10,41 @@ import { Users, MessageSquare, Settings, Terminal, Play } from "lucide-react";
 import { Editor } from "@/components/editor";
 import { Chat } from "@/components/chat";
 import { Terminal as TerminalComponent } from "@/components/terminal";
+import { FileExplorer } from "@/components/file-explorer";
 import { CodeExecutor } from "@/lib/code-execution";
+import { FileNode, fileSystem } from "@/lib/file-system";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
   const [showTerminal, setShowTerminal] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [activeFile, setActiveFile] = useState("main.js");
-  const [code, setCode] = useState("");
+  const [activeFile, setActiveFile] = useState<FileNode | null>(null);
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const handleRunCode = async () => {
-    if (isExecuting) return;
+  const handleFileSelect = (file: FileNode) => {
+    if (file.type === 'file') {
+      setActiveFile(file);
+      const extension = file.name.split('.').pop() || '';
+      const languageMap: { [key: string]: string } = {
+        'js': 'javascript',
+        'ts': 'typescript',
+        'py': 'python',
+        'java': 'java',
+        'cpp': 'cpp'
+      };
+      setSelectedLanguage(languageMap[extension] || 'plaintext');
+    }
+  };
 
-    // Show terminal if it's hidden
+  const handleCodeChange = (code: string) => {
+    if (activeFile) {
+      fileSystem.updateFile(activeFile.id, code);
+    }
+  };
+
+  const handleRunCode = async () => {
+    if (isExecuting || !activeFile?.content) return;
+
     if (!showTerminal) {
       setShowTerminal(true);
     }
@@ -37,7 +58,7 @@ export default function EditorPage() {
     }));
 
     try {
-      const result = await CodeExecutor.executeCode(code, selectedLanguage);
+      const result = await CodeExecutor.executeCode(activeFile.content, selectedLanguage);
       window.dispatchEvent(new CustomEvent('terminal-output', { 
         detail: {
           type: result.success ? 'output' : 'error',
@@ -56,22 +77,6 @@ export default function EditorPage() {
     }
   };
 
-  const getFileExtension = (language: string) => {
-    const extensions: Record<string, string> = {
-      javascript: 'js',
-      typescript: 'ts',
-      python: 'py',
-      java: 'java',
-      cpp: 'cpp'
-    };
-    return extensions[language] || 'txt';
-  };
-
-  const updateActiveFile = (language: string) => {
-    setSelectedLanguage(language);
-    setActiveFile(`main.${getFileExtension(language)}`);
-  };
-
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
@@ -84,7 +89,7 @@ export default function EditorPage() {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Select value={selectedLanguage} onValueChange={updateActiveFile}>
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select Language" />
             </SelectTrigger>
@@ -101,7 +106,7 @@ export default function EditorPage() {
             size="sm" 
             className="flex items-center gap-2"
             onClick={handleRunCode}
-            disabled={isExecuting}
+            disabled={isExecuting || !activeFile}
           >
             <Play className="h-4 w-4" /> {isExecuting ? 'Running...' : 'Run Code'}
           </Button>
@@ -131,26 +136,32 @@ export default function EditorPage() {
       <ResizablePanelGroup direction="vertical" className="flex-1">
         <ResizablePanel defaultSize={70}>
           <ResizablePanelGroup direction="horizontal">
-            <ResizablePanel defaultSize={75}>
-              <Tabs value={activeFile} className="h-full">
-                <div className="border-b">
-                  <ScrollArea className="w-full">
-                    <TabsList>
-                      <TabsTrigger value={activeFile}>
-                        {activeFile}
-                      </TabsTrigger>
-                    </TabsList>
-                  </ScrollArea>
-                </div>
-                <TabsContent value={activeFile} className="h-[calc(100%-48px)]">
-                  <Editor language={selectedLanguage} onCodeChange={setCode} />
-                </TabsContent>
-              </Tabs>
+            <ResizablePanel defaultSize={20} minSize={15}>
+              <FileExplorer
+                onFileSelect={handleFileSelect}
+                selectedFileId={activeFile?.id}
+              />
+            </ResizablePanel>
+            <ResizableHandle />
+            <ResizablePanel defaultSize={60}>
+              <div className="h-full">
+                {activeFile ? (
+                  <Editor
+                    language={selectedLanguage}
+                    onCodeChange={handleCodeChange}
+                    key={activeFile.id}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    Select a file to start editing
+                  </div>
+                )}
+              </div>
             </ResizablePanel>
             {showChat && (
               <>
                 <ResizableHandle />
-                <ResizablePanel defaultSize={25}>
+                <ResizablePanel defaultSize={20}>
                   <Chat />
                 </ResizablePanel>
               </>

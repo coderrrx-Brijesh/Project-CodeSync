@@ -4,7 +4,7 @@ import { Server } from "socket.io";
 import http from "http";
 
 const app = express();
-const PORT = 3001;
+const PORT = 3002;
 
 const server = http.createServer(app);
 
@@ -31,8 +31,12 @@ io.on("connection", (socket) => {
   socket.on("code-changed[FRONTEND]", ({ code, roomId }) => {
     socket.to(roomId).emit("code-changed[SERVER]", { code: code });
   });
+
+  socket.on("disconnect", () => {
+    console.log("User Disconnected", socket.id);
+  });
 });
 
-server.listen(PORT, "192.168.67.2", () => {
+server.listen(PORT, "192.168.137.1", () => {
   console.log(`Server is running on port ${PORT}`);
 });

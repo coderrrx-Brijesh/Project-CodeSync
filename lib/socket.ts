@@ -22,11 +22,14 @@ class SocketManager {
 
   connect() {
     if (!this.socket) {
-      this.socket = io("192.168.67.2:3001", {
-        transports: ["websocket"],
-        query: {
-          userId: this.userId,
-        },
+      fetch("/api/socket").catch(console.error);
+
+      this.socket = io("192.168.137.1:3002", {
+        transports: ["websocket", "polling"], // Allow both WebSocket and polling
+        autoConnect: true,
+        reconnection: true,
+        reconnectionAttempts: 5,
+        reconnectionDelay: 1000,
       });
 
       this.setupEventListeners();
@@ -66,7 +69,10 @@ class SocketManager {
 
   leaveRoom() {
     if (!this.socket || !this.roomId) return;
-    this.socket.emit("leave-room", { roomId: this.roomId, userId: this.userId });
+    this.socket.emit("leave-room", {
+      roomId: this.roomId,
+      userId: this.userId,
+    });
     this.roomId = null;
   }
 
@@ -82,7 +88,7 @@ class SocketManager {
 
   changeCode(code: string) {
     if (!this.socket || !this.roomId) return;
-    
+
     // 🔥 Prevent re-emitting the same code
     if (code !== this.lastEmittedCode) {
       this.lastEmittedCode = code;
