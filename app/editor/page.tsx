@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -24,6 +24,8 @@ import { FileExplorer } from "@/components/file-explorer";
 import { CodeExecutor } from "@/lib/code-execution";
 import { FileNode, fileSystem } from "@/lib/file-system";
 import { toast } from "sonner";
+import { CursorTracker } from "@/components/cursor-tracker";
+import { socketManager } from "@/lib/socket";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
@@ -32,6 +34,26 @@ export default function EditorPage() {
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
+  const [username, setUsername] = useState(
+    "User_" + Math.floor(Math.random() * 1000)
+  );
+  const [cursorColor, setCursorColor] = useState(() => {
+    const colors = [
+      "#FF5D8F",
+      "#4CB9E7",
+      "#FFB100",
+      "#7A86B6",
+      "#3CCF4E",
+      "#FF6969",
+      "#A460ED",
+      "#3A8891",
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  });
+  const [isClicking, setIsClicking] = useState(false);
+
+  // Move this useRef to the component level, outside of any useEffect
+  const lastMousePosition = useRef({ x: 0, y: 0 });
 
   // When a file is selected, load its content
   const handleFileSelect = (file: FileNode) => {
@@ -110,8 +132,66 @@ export default function EditorPage() {
     }
   };
 
+  // Then in your useEffect:
+  useEffect(() => {
+    let lastEmitTime = 0;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const now = Date.now();
+      // Update last position
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
+
+      // Throttle to avoid excessive network traffic
+      if (now - lastEmitTime > 50) {
+        lastEmitTime = now;
+        socketManager.cursorMoved(
+          e.clientX,
+          e.clientY,
+          username,
+          cursorColor,
+          isClicking
+        );
+      }
+    };
+
+    const handleMouseDown = () => {
+      setIsClicking(true);
+      socketManager.cursorMoved(
+        lastMousePosition.current.x,
+        lastMousePosition.current.y,
+        username,
+        cursorColor,
+        true
+      );
+    };
+
+    const handleMouseUp = () => {
+      setIsClicking(false);
+      socketManager.cursorMoved(
+        lastMousePosition.current.x,
+        lastMousePosition.current.y,
+        username,
+        cursorColor,
+        false
+      );
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [username, cursorColor, isClicking]);
+
   return (
     <div className="h-screen flex flex-col">
+      {/* Add this line to show other users' cursors */}
+      <CursorTracker />
+
       {/* Header */}
       <header className="border-b p-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">

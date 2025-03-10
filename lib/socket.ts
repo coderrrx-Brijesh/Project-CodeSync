@@ -26,11 +26,14 @@ class SocketManager {
 
   connect(): Socket {
     if (!this.socket) {
-      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "localhost:3001", {
-        transports: ["websocket"], // Use websocket only from the start
-        reconnectionAttempts: Infinity,
-        reconnectionDelay: 1000,
-      });
+      this.socket = io(
+        process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
+        {
+          transports: ["websocket", "polling"], // Use websocket only from the start
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+        }
+      );
       this.setupEventListeners();
     }
     return this.socket;
@@ -332,6 +335,27 @@ class SocketManager {
       roomId: this.roomId,
       nodeId,
       newParentId,
+    });
+  }
+
+  // Track cursor movement
+  cursorMoved(
+    x: number,
+    y: number,
+    username: string,
+    color: string,
+    clicking: boolean = false
+  ): void {
+    if (!this.socket || !this.roomId) return;
+
+    this.socket.emit("cursor-moved", {
+      roomId: this.roomId,
+      userId: this.userId,
+      x,
+      y,
+      username,
+      color,
+      clicking,
     });
   }
 

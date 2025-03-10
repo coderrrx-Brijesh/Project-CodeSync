@@ -117,6 +117,30 @@ io.on("connection", (socket) => {
     socket.to(roomId).emit("code-changed[SERVER]", { code: code });
   });
 
+
+// Add to your existing socket handlers
+
+// Handle cursor movement
+// Update your existing cursor-moved handler
+
+socket.on("cursor-moved", ({ roomId, userId, x, y, username, color, clicking }) => {
+  // Broadcast cursor position with all properties to all other users in the room
+  socket.to(roomId).emit("cursor-moved", { 
+    userId, 
+    x, 
+    y, 
+    username, 
+    color, 
+    clicking 
+  });
+});
+
+// Modify your existing leave-room handler to also emit a user-left event
+socket.on("leave-room", ({ roomId }) => {
+  socket.leave(roomId);
+  socket.to(roomId).emit("user-left", { userId: socket.id });
+});
+
   // Disconnect event
   socket.on("disconnect", () => {
     console.log("User Disconnected", socket.id);
