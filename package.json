@@ -80,6 +80,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/lodash": "^4.17.16",
     "@types/simple-peer": "^9.11.8",
     "@types/uuid": "^9.0.8",
     "ts-node": "^10.9.2",

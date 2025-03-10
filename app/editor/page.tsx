@@ -1,11 +1,21 @@
-"use client"
+"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Users, MessageSquare, Settings, Terminal, Play } from "lucide-react";
 import { Editor } from "@/components/editor";
 import { Chat } from "@/components/chat";
@@ -13,30 +23,44 @@ import { Terminal as TerminalComponent } from "@/components/terminal";
 import { FileExplorer } from "@/components/file-explorer";
 import { CodeExecutor } from "@/lib/code-execution";
 import { FileNode, fileSystem } from "@/lib/file-system";
+import { toast } from "sonner";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
   const [showTerminal, setShowTerminal] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);
+  const [fileContent, setFileContent] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
 
+  // When a file is selected, load its content
   const handleFileSelect = (file: FileNode) => {
-    if (file.type === 'file') {
+    if (file.type === "file") {
       setActiveFile(file);
-      const extension = file.name.split('.').pop() || '';
+      // Load the file content
+      const content = fileSystem.getFileContent(file.id) || "";
+      setFileContent(content);
+
+      // Set the language based on file extension
+      const extension = file.name.split(".").pop() || "";
       const languageMap: { [key: string]: string } = {
-        'js': 'javascript',
-        'ts': 'typescript',
-        'py': 'python',
-        'java': 'java',
-        'cpp': 'cpp'
+        js: "javascript",
+        ts: "typescript",
+        py: "python",
+        java: "java",
+        cpp: "cpp",
+        md: "markdown",
+        html: "html",
+        css: "css",
+        json: "json",
       };
-      setSelectedLanguage(languageMap[extension] || 'plaintext');
+      setSelectedLanguage(languageMap[extension] || "plaintext");
     }
   };
 
+  // When code changes in the editor, update the file content
   const handleCodeChange = (code: string) => {
+    setFileContent(code);
     if (activeFile) {
       fileSystem.updateFile(activeFile.id, code);
     }
@@ -50,28 +74,37 @@ export default function EditorPage() {
     }
 
     setIsExecuting(true);
-    window.dispatchEvent(new CustomEvent('terminal-output', { 
-      detail: {
-        type: 'command',
-        content: `$ Running ${selectedLanguage} code...`
-      }
-    }));
+    window.dispatchEvent(
+      new CustomEvent("terminal-output", {
+        detail: {
+          type: "command",
+          content: `$ Running ${selectedLanguage} code...`,
+        },
+      })
+    );
 
     try {
-      const result = await CodeExecutor.executeCode(activeFile.content, selectedLanguage);
-      window.dispatchEvent(new CustomEvent('terminal-output', { 
-        detail: {
-          type: result.success ? 'output' : 'error',
-          content: result.output
-        }
-      }));
+      const result = await CodeExecutor.executeCode(
+        fileContent,
+        selectedLanguage
+      );
+      window.dispatchEvent(
+        new CustomEvent("terminal-output", {
+          detail: {
+            type: result.success ? "output" : "error",
+            content: result.output,
+          },
+        })
+      );
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('terminal-output', { 
-        detail: {
-          type: 'error',
-          content: String(error)
-        }
-      }));
+      window.dispatchEvent(
+        new CustomEvent("terminal-output", {
+          detail: {
+            type: "error",
+            content: String(error),
+          },
+        })
+      );
     } finally {
       setIsExecuting(false);
     }
@@ -99,16 +132,20 @@ export default function EditorPage() {
               <SelectItem value="python">Python</SelectItem>
               <SelectItem value="java">Java</SelectItem>
               <SelectItem value="cpp">C++</SelectItem>
+              <SelectItem value="markdown">Markdown</SelectItem>
+              <SelectItem value="html">HTML</SelectItem>
+              <SelectItem value="css">CSS</SelectItem>
             </SelectContent>
           </Select>
-          <Button 
-            variant="default" 
-            size="sm" 
+          <Button
+            variant="default"
+            size="sm"
             className="flex items-center gap-2"
             onClick={handleRunCode}
             disabled={isExecuting || !activeFile}
           >
-            <Play className="h-4 w-4" /> {isExecuting ? 'Running...' : 'Run Code'}
+            <Play className="h-4 w-4" />{" "}
+            {isExecuting ? "Running..." : "Run Code"}
           </Button>
           <div className="flex items-center space-x-2">
             <Button
@@ -144,13 +181,16 @@ export default function EditorPage() {
             </ResizablePanel>
             <ResizableHandle />
             <ResizablePanel defaultSize={60}>
-              <div className="h-full">
+              <div className="h-full w-full flex flex-col">
                 {activeFile ? (
-                  <Editor
-                    language={selectedLanguage}
-                    onCodeChange={handleCodeChange}
-                    key={activeFile.id}
-                  />
+                  <div key={activeFile.id} className="flex-1 h-full w-full">
+                    <Editor
+                      language={selectedLanguage}
+                      initialContent={fileContent}
+                      onCodeChange={handleCodeChange}
+                      fileId={activeFile.id}
+                    />
+                  </div>
                 ) : (
                   <div className="h-full flex items-center justify-center text-muted-foreground">
                     Select a file to start editing

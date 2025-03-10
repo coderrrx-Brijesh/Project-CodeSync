@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { FileNode, fileSystem } from "@/lib/file-system";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -32,6 +32,7 @@ import {
 import { cn } from "@/lib/utils";
 import { FileDialog } from "./file-dialog";
 import { toast } from "sonner";
+import { socketManager } from "@/lib/socket";
 
 interface FileExplorerProps {
   onFileSelect: (file: FileNode) => void;
@@ -53,18 +54,66 @@ export function FileExplorer({
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
   const initialized = useRef(false);
 
+  const refreshFiles = useCallback(() => {
+    const allFiles = fileSystem.getFiles();
+    setFiles(allFiles);
+
+    if (selectedFileId) {
+      const nodeExists = fileSystem.findNode(selectedFileId);
+      if (!nodeExists && onFileSelect) {
+        onFileSelect({
+          id: "",
+          name: "",
+          type: "file",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+      }
+    }
+  }, [selectedFileId, onFileSelect]);
+
   useEffect(() => {
     if (!initialized.current) {
-      const allFiles = fileSystem.getFiles();
-      setFiles(allFiles[0]?.children || []);
+      refreshFiles();
       initialized.current = true;
     }
-  }, []);
+  }, [refreshFiles]);
 
-  const refreshFiles = () => {
-    const allFiles = fileSystem.getFiles();
-    setFiles(allFiles[0]?.children || []);
-  };
+  useEffect(() => {
+    const socket = socketManager.connect();
+
+    const handleFileChanged = () => {
+      console.log("File system changed by another user, refreshing UI");
+      refreshFiles();
+    };
+
+    socket.on("file-created", handleFileChanged);
+    socket.on("file-updated", handleFileChanged);
+    socket.on("file-deleted", handleFileChanged);
+    socket.on("file-renamed", handleFileChanged);
+    socket.on("file-moved", handleFileChanged);
+    socket.on("share-files", handleFileChanged);
+
+    return () => {
+      socket.off("file-created", handleFileChanged);
+      socket.off("file-updated", handleFileChanged);
+      socket.off("file-deleted", handleFileChanged);
+      socket.off("file-renamed", handleFileChanged);
+      socket.off("file-moved", handleFileChanged);
+      socket.off("share-files", handleFileChanged);
+    };
+  }, [refreshFiles]);
+
+  useEffect(() => {
+    const unsubscribe = fileSystem.onFileSystemChange(() => {
+      console.log("File system changed, refreshing UI");
+      refreshFiles();
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [refreshFiles]);
 
   const toggleFolder = (folderId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -79,8 +128,8 @@ export function FileExplorer({
 
   const handleCreateItem = (name: string, type: "file" | "folder") => {
     try {
-      const parentId =
-        selectedNode?.type === "folder" ? selectedNode.id : "root";
+      const parentId = selectedNode?.type === "folder" ? selectedNode.id : null;
+
       const newNode =
         type === "file"
           ? fileSystem.createFile(parentId, name)
@@ -88,8 +137,10 @@ export function FileExplorer({
 
       if (newNode) {
         refreshFiles();
-        if (parentId !== "root") {
-          setExpandedFolders(new Set(Array.from(expandedFolders).concat(parentId)));
+        if (parentId) {
+          setExpandedFolders(
+            new Set(Array.from(expandedFolders).concat(parentId))
+          );
         }
         toast.success(`${type} created successfully`);
       }
@@ -115,13 +166,22 @@ export function FileExplorer({
   const handleDelete = (node: FileNode) => {
     try {
       if (fileSystem.delete(node.id)) {
-        const allFiles = fileSystem.getFiles();
-        setFiles(allFiles[0]?.children || []);
+        refreshFiles();
 
         if (node.type === "folder") {
           const newExpanded = new Set(expandedFolders);
           newExpanded.delete(node.id);
           setExpandedFolders(newExpanded);
+        }
+
+        if (selectedFileId === node.id) {
+          onFileSelect({
+            id: "",
+            name: "",
+            type: "file",
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
         }
 
         toast.success(`${node.type} deleted successfully`);
@@ -156,7 +216,9 @@ export function FileExplorer({
     try {
       if (fileSystem.move(draggedNode.id, targetNode.id)) {
         refreshFiles();
-        setExpandedFolders(new Set(Array.from(expandedFolders).concat(targetNode.id)));
+        setExpandedFolders(
+          new Set(Array.from(expandedFolders).concat(targetNode.id))
+        );
         toast.success("Item moved successfully");
       }
     } catch (error) {
@@ -184,7 +246,7 @@ export function FileExplorer({
                 level > 0 && "ml-4"
               )}
               onClick={() => node.type === "file" && onFileSelect(node)}
-              draggable={node.id !== "root"}
+              draggable={true}
               onDragStart={(e) => handleDragStart(node, e)}
               onDragOver={(e) => handleDragOver(node, e)}
               onDragLeave={() => setDragOverNodeId(null)}
@@ -213,27 +275,23 @@ export function FileExplorer({
             </div>
           </ContextMenuTrigger>
           <ContextMenuContent>
-            {node.id !== "root" && (
-              <>
-                <ContextMenuItem
-                  onClick={() => {
-                    setSelectedNode(node);
-                    setDialogType("rename");
-                    setDialogOpen(true);
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Rename
-                </ContextMenuItem>
-                <ContextMenuItem
-                  onClick={() => handleDelete(node)}
-                  className="text-red-600"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Delete
-                </ContextMenuItem>
-              </>
-            )}
+            <ContextMenuItem
+              onClick={() => {
+                setSelectedNode(node);
+                setDialogType("rename");
+                setDialogOpen(true);
+              }}
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Rename
+            </ContextMenuItem>
+            <ContextMenuItem
+              onClick={() => handleDelete(node)}
+              className="text-red-600"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </ContextMenuItem>
             {node.type === "folder" && (
               <ContextMenuItem
                 onClick={() => {
@@ -257,6 +315,10 @@ export function FileExplorer({
     );
   };
 
+  const renderedFiles = useMemo(() => {
+    return files.map((node) => renderNode(node));
+  }, [files, expandedFolders, selectedFileId, dragOverNodeId]);
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-2 border-b">
@@ -275,7 +337,7 @@ export function FileExplorer({
         </Button>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-2">{files.map((node) => renderNode(node))}</div>
+        <div className="p-2">{renderedFiles}</div>
       </ScrollArea>
       <FileDialog
         open={dialogOpen}
