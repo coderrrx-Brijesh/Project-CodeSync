@@ -12,7 +12,6 @@ class SocketManager {
   private userId: string;
   private lastEmittedCode: string = ""; // Store last emitted code to prevent loops
   private heartbeatInterval: NodeJS.Timeout | null = null;
-
   private constructor() {
     this.userId = uuidv4();
   }
@@ -26,8 +25,8 @@ class SocketManager {
 
   connect(): Socket {
     if (!this.socket) {
-      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "localhost:3001", {
-        transports: ["websocket"], // Use websocket only from the start
+      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001", {
+        transports: ["websocket","polling"], // Use websocket only from the start
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
       });
@@ -65,9 +64,9 @@ class SocketManager {
 
         // Recreate socket with websocket transport
         this.socket = io(
-          process.env.NEXT_PUBLIC_SOCKET_URL || "localhost:3001",
+          process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
           {
-            transports: ["websocket"],
+            transports: ["websocket","polling"],
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
           }

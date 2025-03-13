@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Code2, Users, History, Zap } from "lucide-react";
 import Link from "next/link";
-
+import { socketManager } from "@/lib/socket";
 export default function Home() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-background to-muted">

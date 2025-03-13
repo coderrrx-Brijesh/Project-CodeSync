@@ -37,10 +37,11 @@ io.on("connection", (socket) => {
     socket.join(roomId);
     console.log(`Room ${roomId} created by ${userId}`);
     socket.emit("room-created", { roomId });
+    io.to(roomId).emit("active-user-update",{active_users: io.sockets.adapter.rooms.get(roomId).size})
   });
 
   socket.on("join-room", ({ roomId, userId }) => {
-    // Check if the room exists
+    // Check if the room exists,
     if (!activeRooms.has(roomId)) {
       console.log(`${userId} attempted to join non-existent room ${roomId}`);
       socket.emit("room-error", { message: "This room does not exist" });
@@ -49,7 +50,8 @@ io.on("connection", (socket) => {
 
     socket.join(roomId);
     console.log(`${userId} joined room ${roomId}`);
-    socket.to(roomId).emit("user-connected", userId);
+    socket.to(roomId).emit("user-connected", {userId});
+    io.to(roomId).emit("active-user-update",{active_users: io.sockets.adapter.rooms.get(roomId).size})
 
     // Request current file system from the room
     socket.to(roomId).emit("request-file-system", { requestingUserId: userId });
@@ -120,6 +122,7 @@ io.on("connection", (socket) => {
   // Disconnect event
   socket.on("disconnect", () => {
     console.log("User Disconnected", socket.id);
+    
   });
 });
 

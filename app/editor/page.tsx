@@ -24,6 +24,7 @@ import { FileExplorer } from "@/components/file-explorer";
 import { CodeExecutor } from "@/lib/code-execution";
 import { FileNode, fileSystem } from "@/lib/file-system";
 import { toast } from "sonner";
+import { socketManager } from "@/lib/socket";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
@@ -32,7 +33,12 @@ export default function EditorPage() {
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
+  const [activeUsers, setActiveUsers] = useState(0);
 
+  const socket = socketManager.connect();
+  socket.on("active-user-update", ({active_users}) => {
+    setActiveUsers(active_users);
+  })
   // When a file is selected, load its content
   const handleFileSelect = (file: FileNode) => {
     if (file.type === "file") {
@@ -118,7 +124,7 @@ export default function EditorPage() {
           <h1 className="text-xl font-bold">CodeSync Editor</h1>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
-            <span>3 online</span>
+            <span>{activeUsers} online</span>
           </div>
         </div>
         <div className="flex items-center space-x-4">

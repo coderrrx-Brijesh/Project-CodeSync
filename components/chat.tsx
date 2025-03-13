@@ -32,12 +32,13 @@ export function Chat() {
       setMessages(prev => [...prev, chat]);
     });
 
-    socket.on("user-connected", (userId: string) => {
-      toast.success(`User ${userId} joined the room`);
+    socket.on("user-connected", ({userId}) => {
+      toast.success(`User ${userId} joined the room.`);
     })
 
     return () => {
       socketManager.leaveRoom();
+      
     };
   }, []);
 
