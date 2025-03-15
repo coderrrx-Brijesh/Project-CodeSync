@@ -10,7 +10,7 @@ import { Label } from './ui/label';
 import { socketManager } from '@/lib/socket';
 import { toast } from 'sonner';
 import { Users, Plus, LogIn } from 'lucide-react';
-
+import  VideoCallToggle  from './videocall-toggle';
 interface Message {
   id: string;
   userId: string;
@@ -78,6 +78,7 @@ export function Chat() {
           {!roomId ? (
             <>
               <Dialog>
+                  
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="flex items-center gap-2">
                     <LogIn className="h-4 w-4" /> Join Room
@@ -118,7 +119,7 @@ export function Chat() {
           )}
         </div>
       </div>
-      <ScrollArea className="flex-1 p-4">
+      <ScrollArea className="flex-1 p-0">
         <div className="space-y-4">
           {messages.map((msg,key) => (
             <div key={key} className="flex items-start space-x-3">
@@ -141,6 +142,7 @@ export function Chat() {
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
+          <VideoCallToggle/>
       <div className="border-t p-4">
         <form onSubmit={handleSendMessage} className="flex space-x-2">
           <Input

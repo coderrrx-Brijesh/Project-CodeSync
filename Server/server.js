@@ -1,18 +1,22 @@
 // Import the required modules
+import fs from "fs"
+import https from "https"
+
 import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
-import http from "http";
 
 const app = express();
 const PORT = 3001;
 
-const server = http.createServer(app);
+const key=fs.readFileSync('cert.key')
+const cert=fs.readFileSync('cert.crt')
+const expressSever = https.createServer({key,cert}, app);
 
 // Configure Socket.IO with better connection settings
-const io = new Server(server, {
+const io = new Server(expressSever, {
   cors: {
-    origin: "*",
+    origin: ["*"],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -28,8 +32,49 @@ app.use(express.json());
 // active rooms
 const activeRooms = new Map();
 
+//webRTC variables
+const offers =[
+  //offererUsername
+  //offer
+  //offerIceCandidates
+  //answerUserName
+  //answer
+  //answerIceCandidates
+]
+const connectedSockets = [
+  //username, socketdId
+]
+
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
+
+  const userName = socket.handshake.auth.userName;
+  const password = socket.handshake.auth.password;
+
+connectedSockets.push({
+  socketId: socket.id,
+  userName
+})
+
+ //a new client has joined. If there are any offers available,
+    //emit them out
+    if(offers.length){
+      socket.emit('availableOffers',offers);
+  }
+
+  socket.on("newOffer", newOffer=>{
+    offers.push({
+      offerUserName:userName,
+      offer: newOffer,
+      offerIceCandidates:[],
+      answererUserName: null,
+      answer: null,
+      answerIceCandidates: []
+    })
+      // console.log(newOffer.sdp.slice(50))
+        //send out to all connected sockets EXCEPT the caller
+        socket.broadcast.emit('newOfferAwaiting',offers.slice(-1))
+  })
 
   // Room management
   socket.on("create-room", ({ roomId, userId }) => {
@@ -126,6 +171,7 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => {
+expressSever.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -33,6 +33,26 @@ export default function EditorPage() {
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
+  const [username, setUsername] = useState(
+    "User_" + Math.floor(Math.random() * 1000)
+  );
+  const [cursorColor, setCursorColor] = useState(() => {
+    const colors = [
+      "#FF5D8F",
+      "#4CB9E7",
+      "#FFB100",
+      "#7A86B6",
+      "#3CCF4E",
+      "#FF6969",
+      "#A460ED",
+      "#3A8891",
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  });
+  const [isClicking, setIsClicking] = useState(false);
+
+  // Move this useRef to the component level, outside of any useEffect
+  const lastMousePosition = useRef({ x: 0, y: 0 });
   const [activeUsers, setActiveUsers] = useState(0);
 
   const socket = socketManager.connect();
@@ -207,7 +227,7 @@ export default function EditorPage() {
             {showChat && (
               <>
                 <ResizableHandle />
-                <ResizablePanel defaultSize={20}>
+                <ResizablePanel defaultSize={50} >
                   <Chat />
                 </ResizablePanel>
               </>

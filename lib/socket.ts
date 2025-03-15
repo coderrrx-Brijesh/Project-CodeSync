@@ -1,7 +1,5 @@
 "use client";
-"use client";
 
-import { useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 
@@ -12,6 +10,16 @@ class SocketManager {
   private userId: string;
   private lastEmittedCode: string = ""; // Store last emitted code to prevent loops
   private heartbeatInterval: NodeJS.Timeout | null = null;
+
+  // callback setters for updating video streams in the UI
+
+  public setLocalStreamCallback: (stream: MediaStream) => void=()=>{}
+  public setRemoteStreamCallback: (stream: MediaStream) => void=()=>{}
+  
+  private userName = "Coderrr-"+Math.floor(Math.random()*100000);
+  private password = "x"
+  
+
   private constructor() {
     this.userId = uuidv4();
   }
@@ -24,8 +32,11 @@ class SocketManager {
   }
 
   connect(): Socket {
+    auth:{
+      this.userName,this.password
+    }
     if (!this.socket) {
-      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001", {
+      this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || "https://localhost:3001", {
         transports: ["websocket","polling"], // Use websocket only from the start
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
@@ -40,7 +51,6 @@ class SocketManager {
 
     this.socket.on("connect", () => {
       console.log("Connected to WebSocket server with ID:", this.socket?.id);
-
       // Rejoin room if we were in one
       if (this.roomId) {
         this.joinRoom(this.roomId);
@@ -64,11 +74,11 @@ class SocketManager {
 
         // Recreate socket with websocket transport
         this.socket = io(
-          process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
+          process.env.NEXT_PUBLIC_SOCKET_URL || "https://localhost:3001",
           {
             transports: ["websocket","polling"],
             reconnectionAttempts: Infinity,
-            reconnectionDelay: 1000,
+            reconnectionDelay:1000
           }
         );
 
@@ -77,31 +87,25 @@ class SocketManager {
       // Otherwise, the socket will automatically try to reconnect
     });
 
-    // Add connection error handling
-    this.socket.on("connect_error", (error) => {
-      console.error("Connection error:", error);
+    // // Add connection error handling
+    // this.socket.on("connect_error", (error) => {
+    //   console.error("Connection error:", error);
+    // });
+    
 
-      // Just close the current transport and reconnect
-      if (
-        this.socket &&
-        this.socket.io &&
-        this.socket.io.engine &&
-        this.socket.io.engine.transport
-      ) {
-        // Just close and let the reconnect logic handle it
-        this.socket.io.engine.transport.close();
-        // Reconnect with websocket only
-        this.socket.disconnect();
-        this.socket.connect();
-      }
-    });
 
-    this.socket.on("code-changed[SERVER]", ({ code }: { code: string }) => {
-      // Update last emitted code to prevent loops
-      if (code !== this.lastEmittedCode) {
-        this.lastEmittedCode = code;
-      }
-    });
+    // adding video call handlers
+        // Example: Receiving a local stream (this event should be triggered by your WebRTC logic)
+        this.socket.on("local-stream", (data: { stream: MediaStream }) => {
+          console.log("Received local stream");
+          this.setLocalStreamCallback(data.stream);
+        });
+    
+        // Example: Receiving a remote stream
+        this.socket.on("remote-stream", (data: { stream: MediaStream }) => {
+          console.log("Received remote stream");
+          this.setRemoteStreamCallback(data.stream);
+        });
 
     // Add handlers for file system events
     this.socket.on(
@@ -360,6 +364,10 @@ class SocketManager {
       this.socket = null;
     }
   }
+
+
+
+  // video call code 
 }
 
 export const socketManager = SocketManager.getInstance();
