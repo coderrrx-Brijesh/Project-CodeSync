@@ -338,6 +338,27 @@ class SocketManager {
     });
   }
 
+  // Track cursor movement
+  cursorMoved(
+    x: number,
+    y: number,
+    username: string,
+    color: string,
+    clicking: boolean = false
+  ): void {
+    if (!this.socket || !this.roomId) return;
+
+    this.socket.emit("cursor-moved", {
+      roomId: this.roomId,
+      userId: this.userId,
+      x,
+      y,
+      username,
+      color,
+      clicking,
+    });
+  }
+
   private startHeartbeat() {
     // Clear any existing heartbeat
     if (this.heartbeatInterval) {

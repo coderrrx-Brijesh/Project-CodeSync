@@ -25,6 +25,7 @@ import { CodeExecutor } from "@/lib/code-execution";
 import { FileNode, fileSystem } from "@/lib/file-system";
 import { toast } from "sonner";
 import { socketManager } from "@/lib/socket";
+import { CursorTracker } from "@/components/cursor-tracker";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
@@ -136,8 +137,66 @@ export default function EditorPage() {
     }
   };
 
+  // Then in your useEffect:
+  useEffect(() => {
+    let lastEmitTime = 0;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const now = Date.now();
+      // Update last position
+      lastMousePosition.current = { x: e.clientX, y: e.clientY };
+
+      // Throttle to avoid excessive network traffic
+      if (now - lastEmitTime > 50) {
+        lastEmitTime = now;
+        socketManager.cursorMoved(
+          e.clientX,
+          e.clientY,
+          username,
+          cursorColor,
+          isClicking
+        );
+      }
+    };
+
+    const handleMouseDown = () => {
+      setIsClicking(true);
+      socketManager.cursorMoved(
+        lastMousePosition.current.x,
+        lastMousePosition.current.y,
+        username,
+        cursorColor,
+        true
+      );
+    };
+
+    const handleMouseUp = () => {
+      setIsClicking(false);
+      socketManager.cursorMoved(
+        lastMousePosition.current.x,
+        lastMousePosition.current.y,
+        username,
+        cursorColor,
+        false
+      );
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mousedown", handleMouseDown);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mousedown", handleMouseDown);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [username, cursorColor, isClicking]);
+
   return (
     <div className="h-screen flex flex-col">
+      {/* Add this line to show other users' cursors */}
+      <CursorTracker />
+
       {/* Header */}
       <header className="border-b p-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
