@@ -24,7 +24,7 @@ app.use(express.json());
 
 // Track active rooms
 const activeRooms = new Map();
-
+const socketToRoom = new Map();
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
@@ -32,8 +32,12 @@ io.on("connection", (socket) => {
   socket.on("create-room", ({ roomId, userId }) => {
     if (!activeRooms.has(roomId)) {
       activeRooms.set(roomId, { createdBy: userId, createdAt: new Date() });
+      socketToRoom.set(socket.id, roomId);
     }
     socket.join(roomId);
+    io.to(roomId).emit("active-user-update", {
+      activeUsers: io.sockets.adapter.rooms.get(roomId).size,
+    });
     console.log(`Room ${roomId} created by ${userId}`);
     socket.emit("room-created", { roomId });
   });
@@ -45,6 +49,10 @@ io.on("connection", (socket) => {
       return;
     }
     socket.join(roomId);
+    io.to(roomId).emit("active-user-update", {
+      activeUsers: io.sockets.adapter.rooms.get(roomId).size,
+    });
+    socketToRoom.set(socket.id, roomId);
     console.log(`${userId} joined room ${roomId}`);
     socket.to(roomId).emit("user-connected", userId);
     // Request current file system from existing users
@@ -108,12 +116,24 @@ io.on("connection", (socket) => {
   });
 
   // ----- Cursor Movement -----
-  socket.on("cursor-moved", ({ roomId, userId, x, y, username, color, clicking }) => {
-    socket.to(roomId).emit("cursor-moved", { userId, x, y, username, color, clicking });
-  });
+  socket.on(
+    "cursor-moved",
+    ({ roomId, userId, x, y, username, color, clicking }) => {
+      socket
+        .to(roomId)
+        .emit("cursor-moved", { userId, x, y, username, color, clicking });
+    }
+  );
 
   // ----- Disconnect -----
   socket.on("disconnect", () => {
+    const roomId = socketToRoom.get(socket.id);
+    if (io && roomId) {
+      const room = io.sockets.adapter.rooms.get(roomId);
+      if (room) {
+        io.to(roomId).emit("active-user-update", { activeUsers: room.size });
+      }
+    }
     console.log("User Disconnected:", socket.id);
     activeRooms.forEach((_, roomId) => cleanupRoomIfEmpty(roomId));
   });

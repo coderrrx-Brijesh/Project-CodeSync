@@ -23,7 +23,6 @@ import { Terminal as TerminalComponent } from "@/components/terminal";
 import { FileExplorer } from "@/components/file-explorer";
 import { CodeExecutor } from "@/lib/code-execution";
 import { FileNode, fileSystem } from "@/lib/file-system";
-import { toast } from "sonner";
 import { CursorTracker } from "@/components/cursor-tracker";
 import { socketManager } from "@/lib/socket";
 
@@ -51,6 +50,13 @@ export default function EditorPage() {
     return colors[Math.floor(Math.random() * colors.length)];
   });
   const [isClicking, setIsClicking] = useState(false);
+
+  // active-users in room 
+  const [activeUsers,setActiveUsers]= useState(0);
+  const socket = socketManager.connect();
+  socket.on("active-user-update", ({activeUsers})=>{
+    setActiveUsers(activeUsers)
+  })
 
   // Move this useRef to the component level, outside of any useEffect
   const lastMousePosition = useRef({ x: 0, y: 0 });
@@ -198,7 +204,7 @@ export default function EditorPage() {
           <h1 className="text-xl font-bold">CodeSync Editor</h1>
           <div className="flex items-center space-x-2">
             <Users className="h-4 w-4" />
-            <span>3 online</span>
+            <span>{activeUsers} online</span>
           </div>
         </div>
         <div className="flex items-center space-x-4">

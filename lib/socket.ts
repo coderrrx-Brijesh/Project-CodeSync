@@ -10,7 +10,6 @@ class SocketManager {
   private userId: string;
   private lastEmittedCode: string = ""; // Prevent loops on code synchronization
   private heartbeatInterval: NodeJS.Timeout | null = null;
-
   private constructor() {
     this.userId = uuidv4();
   }
