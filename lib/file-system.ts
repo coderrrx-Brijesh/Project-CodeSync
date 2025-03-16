@@ -18,93 +18,13 @@ export interface FileNode {
 
 class FileSystem {
   private static instance: FileSystem;
-  private files: FileNode[];
+  private files: FileNode[] = [];
   private initialized: boolean = false;
-  private userId: string = "";
+  private userId: string;
   private changeListeners: Array<() => void> = [];
 
   private constructor() {
-    this.files = [];
-    // Get the user ID from socket manager
     this.userId = socketManager.getUserId();
-  }
-
-  private getStorageKey(): string {
-    return `fileSystem_${this.userId}`;
-  }
-
-  private initialize() {
-    if (this.initialized) return;
-
-    // Update userId in case it wasn't available during construction
-    this.userId = socketManager.getUserId();
-
-    try {
-      // Use user-specific key for localStorage
-      const savedFiles = localStorage.getItem(this.getStorageKey());
-      if (savedFiles) {
-        const parsedFiles = JSON.parse(savedFiles);
-        // Convert string dates back to Date objects
-        this.files = this.convertDates(parsedFiles);
-      } else {
-        // Start with empty file system for new users
-        this.files = [];
-      }
-    } catch (error) {
-      console.error("Error initializing FileSystem:", error);
-      this.files = [];
-    }
-
-    this.initialized = true;
-  }
-
-  private createDefaultStructure() {
-    // Create a root folder
-    const rootFolder: FileNode = {
-      id: uuidv4(),
-      name: "My Project",
-      type: "folder",
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    // Add some default files
-    const mainJsFile: FileNode = {
-      id: uuidv4(),
-      name: "main.js",
-      type: "file",
-      content:
-        "// Write your JavaScript code here\nconsole.log('Hello, world!');\n",
-      extension: "js",
-      parentId: rootFolder.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    const readmeFile: FileNode = {
-      id: uuidv4(),
-      name: "README.md",
-      type: "file",
-      content: "# My Project\n\nWelcome to CodeSync!\n",
-      extension: "md",
-      parentId: rootFolder.id,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    rootFolder.children = [mainJsFile, readmeFile];
-    this.files = [rootFolder];
-    this.saveToStorage();
-  }
-
-  private convertDates(nodes: any[]): FileNode[] {
-    return nodes.map((node) => ({
-      ...node,
-      createdAt: new Date(node.createdAt),
-      updatedAt: new Date(node.updatedAt),
-      children: node.children ? this.convertDates(node.children) : undefined,
-    }));
   }
 
   static getInstance(): FileSystem {
@@ -114,11 +34,77 @@ class FileSystem {
     return FileSystem.instance;
   }
 
+  private getStorageKey(): string {
+    return `fileSystem_${this.userId}`;
+  }
+
+  private initialize() {
+    if (this.initialized) return;
+    this.userId = socketManager.getUserId();
+    try {
+      const savedFiles = localStorage.getItem(this.getStorageKey());
+      if (savedFiles) {
+        const parsed = JSON.parse(savedFiles);
+        this.files = this.convertDates(parsed);
+      } else {
+        // If no files exist, create a default structure
+        this.createDefaultStructure();
+      }
+    } catch (error) {
+      console.error("Error initializing FileSystem:", error);
+      this.files = [];
+    }
+    this.initialized = true;
+  }
+
+  private convertDates(nodes: any[]): FileNode[] {
+    return nodes.map((node) => ({
+      ...node,
+      createdAt: new Date(node.createdAt),
+      updatedAt: new Date(node.updatedAt),
+      children: node.children ? this.convertDates(node.children) : [],
+    }));
+  }
+
+  private createDefaultStructure() {
+    const rootFolder: FileNode = {
+      id: uuidv4(),
+      name: "My Project",
+      type: "folder",
+      children: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const mainJsFile: FileNode = {
+      id: uuidv4(),
+      name: "main.js",
+      type: "file",
+      content: "// Your code here\nconsole.log('Hello, world!');",
+      extension: "js",
+      parentId: rootFolder.id,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    rootFolder.children!.push(mainJsFile);
+    this.files = [rootFolder];
+    this.saveToStorage();
+    this.notifyChangeListeners();
+  }
+
+  // ------------------ Public API ------------------
   getFiles(): FileNode[] {
     if (typeof window !== "undefined" && !this.initialized) {
       this.initialize();
     }
     return this.files;
+  }
+
+  // NEW: Get file content by id
+  getFileContent(id: string): string | null {
+    const file = this.findNode(id);
+    return file && file.type === "file" ? file.content || "" : null;
   }
 
   findNode(id: string, nodes: FileNode[] = this.files): FileNode | null {
@@ -146,19 +132,16 @@ class FileSystem {
 
     if (parentId) {
       const parent = this.findNode(parentId);
-      if (parent && parent.type === "folder") {
-        // Check for duplicate names in the parent folder
-        if (parent.children?.some((child) => child.name === name)) {
-          throw new Error("File already exists in this folder");
-        }
-        parent.children = parent.children || [];
-        parent.children.push(newFile);
-        newFile.parentId = parentId;
-      } else {
+      if (!parent || parent.type !== "folder") {
         throw new Error("Parent folder not found");
       }
+      if (parent.children?.some((child) => child.name === name)) {
+        throw new Error("File already exists in this folder");
+      }
+      parent.children = parent.children || [];
+      parent.children.push(newFile);
+      newFile.parentId = parentId;
     } else {
-      // Check for duplicate names in root
       if (this.files.some((node) => node.name === name)) {
         throw new Error("File already exists in root");
       }
@@ -168,7 +151,6 @@ class FileSystem {
     this.saveToStorage();
     this.notifyChangeListeners();
 
-    // Emit immediately without debounce
     const roomId = socketManager.getRoomId();
     if (roomId) {
       socketManager.connect().emit("file-created", {
@@ -193,19 +175,15 @@ class FileSystem {
 
     if (parentId) {
       const parent = this.findNode(parentId);
-      if (parent && parent.type === "folder") {
-        // Check for duplicate names in the parent folder
-        if (parent.children?.some((child) => child.name === name)) {
-          throw new Error("Folder already exists in this folder");
-        }
-        parent.children = parent.children || [];
-        parent.children.push(newFolder);
-        newFolder.parentId = parentId;
-      } else {
+      if (!parent || parent.type !== "folder") {
         throw new Error("Parent folder not found");
       }
+      if (parent.children?.some((child) => child.name === name)) {
+        throw new Error("Folder already exists in this folder");
+      }
+      parent.children?.push(newFolder);
+      newFolder.parentId = parentId;
     } else {
-      // Check for duplicate names in root
       if (this.files.some((node) => node.name === name)) {
         throw new Error("Folder already exists in root");
       }
@@ -214,26 +192,29 @@ class FileSystem {
 
     this.saveToStorage();
     this.notifyChangeListeners();
-    // Emit event to synchronize with other users
-    socketManager.folderCreated(newFolder, parentId);
+
+    const roomId = socketManager.getRoomId();
+    if (roomId) {
+      socketManager.connect().emit("folder-created", {
+        roomId,
+        folder: JSON.parse(JSON.stringify(newFolder)),
+        parentId,
+      });
+    }
+
     return newFolder;
   }
 
   updateFile(id: string, content: string): boolean {
     const file = this.findNode(id);
     if (!file || file.type !== "file") return false;
-
     file.content = content;
     file.updatedAt = new Date();
     this.saveToStorage();
-
-    // Use debounced emit for content updates
     this.debouncedEmitContentChange(id, content);
-
     return true;
   }
 
-  // Debounced method for content updates only (300ms is usually a good balance)
   private debouncedEmitContentChange = debounce(
     (fileId: string, content: string) => {
       const roomId = socketManager.getRoomId();
@@ -248,7 +229,6 @@ class FileSystem {
     300
   );
 
-  // Version without emitting events (to prevent loops)
   updateFileWithoutEmit(id: string, content: string): boolean {
     const file = this.findNode(id);
     if (!file || file.type !== "file") return false;
@@ -259,27 +239,15 @@ class FileSystem {
     return true;
   }
 
-  getFileContent(id: string): string | null {
-    const file = this.findNode(id);
-    if (!file || file.type !== "file") return null;
-    return file.content || "";
-  }
-
   rename(id: string, newName: string): boolean {
     const node = this.findNode(id);
     if (!node) return false;
-
-    // Check if sibling with same name exists
     const siblings = node.parentId
       ? this.findNode(node.parentId)?.children || []
       : this.files;
-
-    if (
-      siblings.some((sibling) => sibling.id !== id && sibling.name === newName)
-    ) {
+    if (siblings.some((s) => s.id !== id && s.name === newName)) {
       throw new Error("A file or folder with this name already exists");
     }
-
     node.name = newName;
     if (node.type === "file") {
       node.extension = newName.split(".").pop() || "";
@@ -287,26 +255,20 @@ class FileSystem {
     node.updatedAt = new Date();
     this.saveToStorage();
     this.notifyChangeListeners();
-
-    // Emit event to sync with other users in the room
     const roomId = socketManager.getRoomId();
     if (roomId) {
-      console.log("Emitting file-renamed event for:", id, "new name:", newName);
       socketManager.connect().emit("file-renamed", {
         roomId,
         nodeId: id,
         newName,
       });
     }
-
     return true;
   }
 
-  // Implement the "without emit" version for handling received events
   renameWithoutEmit(id: string, newName: string): boolean {
     const node = this.findNode(id);
     if (!node) return false;
-
     node.name = newName;
     if (node.type === "file") {
       node.extension = newName.split(".").pop() || "";
@@ -318,61 +280,42 @@ class FileSystem {
   }
 
   delete(id: string): boolean {
-    // Delete from root level
     const rootIndex = this.files.findIndex((node) => node.id === id);
     if (rootIndex !== -1) {
       this.files.splice(rootIndex, 1);
       this.saveToStorage();
       this.notifyChangeListeners();
-
-      // Emit event to sync with other users in the room
       const roomId = socketManager.getRoomId();
       if (roomId) {
-        socketManager.connect().emit("file-deleted", {
-          roomId,
-          nodeId: id,
-        });
+        socketManager.connect().emit("file-deleted", { roomId, nodeId: id });
       }
-
       return true;
     }
-
-    // Delete from nested folders
-    const deleteFromChildren = (children: FileNode[], id: string): boolean => {
-      const index = children.findIndex((node) => node.id === id);
-      if (index !== -1) {
-        children.splice(index, 1);
+    const deleteFromChildren = (children: FileNode[], nodeId: string): boolean => {
+      const idx = children.findIndex((node) => node.id === nodeId);
+      if (idx !== -1) {
+        children.splice(idx, 1);
         return true;
       }
       return children.some(
-        (node) => node.children && deleteFromChildren(node.children, id)
+        (child) => child.children && deleteFromChildren(child.children, nodeId)
       );
     };
-
     const result = this.files.some(
       (node) => node.children && deleteFromChildren(node.children, id)
     );
-
     if (result) {
       this.saveToStorage();
       this.notifyChangeListeners();
-
-      // Emit event to sync with other users in the room
       const roomId = socketManager.getRoomId();
       if (roomId) {
-        socketManager.connect().emit("file-deleted", {
-          roomId,
-          nodeId: id,
-        });
+        socketManager.connect().emit("file-deleted", { roomId, nodeId: id });
       }
     }
-
     return result;
   }
 
-  // Version without emitting events
   deleteWithoutEmit(id: string): boolean {
-    // Delete from root level
     const rootIndex = this.files.findIndex((node) => node.id === id);
     if (rootIndex !== -1) {
       this.files.splice(rootIndex, 1);
@@ -380,128 +323,85 @@ class FileSystem {
       this.notifyChangeListeners();
       return true;
     }
-
-    // Delete from nested folders
-    const deleteFromChildren = (children: FileNode[], id: string): boolean => {
-      const index = children.findIndex((node) => node.id === id);
-      if (index !== -1) {
-        children.splice(index, 1);
+    const deleteFromChildren = (children: FileNode[], nodeId: string): boolean => {
+      const idx = children.findIndex((node) => node.id === nodeId);
+      if (idx !== -1) {
+        children.splice(idx, 1);
         return true;
       }
       return children.some(
-        (node) => node.children && deleteFromChildren(node.children, id)
+        (child) => child.children && deleteFromChildren(child.children, nodeId)
       );
     };
-
     const result = this.files.some(
       (node) => node.children && deleteFromChildren(node.children, id)
     );
-
     if (result) {
       this.saveToStorage();
       this.notifyChangeListeners();
     }
-
     return result;
   }
 
   move(nodeId: string, newParentId: string | null): boolean {
     const node = this.findNode(nodeId);
     if (!node) return false;
-
-    // Get a copy of the node before removing it
     const nodeCopy = JSON.parse(JSON.stringify(node));
-
-    // Remove from current location
     if (!this.delete(nodeId)) {
       return false;
     }
-
     if (newParentId) {
       const newParent = this.findNode(newParentId);
       if (!newParent || newParent.type !== "folder") return false;
-
-      // Check for name conflicts in target folder
       if (newParent.children?.some((child) => child.name === node.name)) {
-        // Restore the node to its original location
         this.restoreNode(nodeCopy);
-        throw new Error(
-          "An item with the same name already exists in the destination"
-        );
+        throw new Error("An item with the same name already exists here");
       }
-
       newParent.children = newParent.children || [];
-      newParent.children.push({
-        ...node,
-        parentId: newParentId,
-      });
+      newParent.children.push({ ...node, parentId: newParentId });
     } else {
-      // Moving to root
-      if (this.files.some((file) => file.name === node.name)) {
-        // Restore the node to its original location
+      if (this.files.some((f) => f.name === node.name)) {
         this.restoreNode(nodeCopy);
         throw new Error("An item with the same name already exists in root");
       }
-
-      this.files.push({
-        ...node,
-        parentId: undefined,
-      });
+      this.files.push({ ...node, parentId: undefined });
     }
-
     this.saveToStorage();
     this.notifyChangeListeners();
-    // Emit event at the end
-    socketManager.fileMoved(nodeId, newParentId);
+    const roomId = socketManager.getRoomId();
+    if (roomId) {
+      socketManager.connect().emit("file-moved", {
+        roomId,
+        nodeId,
+        newParentId,
+      });
+    }
     return true;
   }
 
-  // Version without emitting events
   moveWithoutEmit(nodeId: string, newParentId: string | null): boolean {
-    // Same implementation but without socketManager.fileMoved() call
     const node = this.findNode(nodeId);
     if (!node) return false;
-
-    // Get a copy of the node before removing it
     const nodeCopy = JSON.parse(JSON.stringify(node));
-
-    // Remove from current location
     if (!this.delete(nodeId)) {
       return false;
     }
-
     if (newParentId) {
       const newParent = this.findNode(newParentId);
       if (!newParent || newParent.type !== "folder") return false;
-
-      // Check for name conflicts in target folder
       if (newParent.children?.some((child) => child.name === node.name)) {
-        // Restore the node to its original location
         this.restoreNode(nodeCopy);
-        throw new Error(
-          "An item with the same name already exists in the destination"
-        );
+        throw new Error("Name conflict in destination");
       }
-
       newParent.children = newParent.children || [];
-      newParent.children.push({
-        ...node,
-        parentId: newParentId,
-      });
+      newParent.children.push({ ...node, parentId: newParentId });
     } else {
-      // Moving to root
-      if (this.files.some((file) => file.name === node.name)) {
-        // Restore the node to its original location
+      if (this.files.some((f) => f.name === node.name)) {
         this.restoreNode(nodeCopy);
-        throw new Error("An item with the same name already exists in root");
+        throw new Error("Name conflict in root");
       }
-
-      this.files.push({
-        ...node,
-        parentId: undefined,
-      });
+      this.files.push({ ...node, parentId: undefined });
     }
-
     this.saveToStorage();
     this.notifyChangeListeners();
     return true;
@@ -512,39 +412,53 @@ class FileSystem {
       const parent = this.findNode(node.parentId);
       if (parent && parent.type === "folder") {
         parent.children = parent.children || [];
-        parent.children.push(node);
+        const index = parent.children.findIndex((c) => c.id === node.id);
+        if (index !== -1) {
+          parent.children[index] = node;
+        } else {
+          parent.children.push(node);
+        }
       }
     } else {
-      this.files.push(node);
+      const index = this.files.findIndex((f) => f.id === node.id);
+      if (index !== -1) {
+        this.files[index] = node;
+      } else {
+        this.files.push(node);
+      }
     }
     this.saveToStorage();
   }
 
-  private saveToStorage() {
-    if (typeof window !== "undefined") {
-      localStorage.setItem(this.getStorageKey(), JSON.stringify(this.files));
-    }
-  }
-
-  // New method to sync files from another user
+  // ------------------ Sync / Import ------------------
   syncFiles(externalFiles: FileNode[]): void {
-    // Replace current files with the received ones
     this.files = this.convertDates(externalFiles);
     this.saveToStorage();
+    this.notifyChangeListeners();
   }
 
-  // New methods to add existing files/folders from other users
   addExistingFile(file: FileNode, parentId: string | null): void {
     if (parentId) {
       const parent = this.findNode(parentId);
       if (parent && parent.type === "folder") {
         parent.children = parent.children || [];
-        parent.children.push(file);
+        const index = parent.children.findIndex((c) => c.id === file.id);
+        if (index !== -1) {
+          parent.children[index] = file;
+        } else {
+          parent.children.push(file);
+        }
       }
     } else {
-      this.files.push(file);
+      const index = this.files.findIndex((f) => f.id === file.id);
+      if (index !== -1) {
+        this.files[index] = file;
+      } else {
+        this.files.push(file);
+      }
     }
     this.saveToStorage();
+    this.notifyChangeListeners();
   }
 
   addExistingFolder(folder: FileNode, parentId: string | null): void {
@@ -552,31 +466,33 @@ class FileSystem {
       const parent = this.findNode(parentId);
       if (parent && parent.type === "folder") {
         parent.children = parent.children || [];
-        parent.children.push(folder);
+        const index = parent.children.findIndex((c) => c.id === folder.id);
+        if (index !== -1) {
+          parent.children[index] = folder;
+        } else {
+          parent.children.push(folder);
+        }
       }
     } else {
-      this.files.push(folder);
+      const index = this.files.findIndex((f) => f.id === folder.id);
+      if (index !== -1) {
+        this.files[index] = folder;
+      } else {
+        this.files.push(folder);
+      }
     }
     this.saveToStorage();
+    this.notifyChangeListeners();
   }
 
-  // Add methods for file synchronization
-
-  // Get serializable file structure (for sending over socket)
-  getSerializableFiles(): any[] {
-    return JSON.parse(JSON.stringify(this.files));
-  }
-
-  // Import files from another user
   importFiles(externalFiles: any[]): void {
     if (!externalFiles || externalFiles.length === 0) return;
-
-    // Replace current files with received ones
     this.files = this.convertDates(externalFiles);
     this.saveToStorage();
+    this.notifyChangeListeners();
   }
 
-  // Add a received file from another user
+  // Add a received file from another user (no re-emit)
   addReceivedFile(file: FileNode, parentId: string | null): void {
     const newFile = {
       ...file,
@@ -588,35 +504,33 @@ class FileSystem {
       const parent = this.findNode(parentId);
       if (parent && parent.type === "folder") {
         parent.children = parent.children || [];
-
-        // Remove any existing file with the same ID
-        parent.children = parent.children.filter(
-          (child) => child.id !== file.id
-        );
-
-        parent.children.push(newFile);
+        const index = parent.children.findIndex((c) => c.id === newFile.id);
+        if (index !== -1) {
+          parent.children[index] = newFile;
+        } else {
+          parent.children.push(newFile);
+        }
       }
     } else {
-      // Remove any existing file with the same ID
-      this.files = this.files.filter((f) => f.id !== file.id);
-      this.files.push(newFile);
+      const index = this.files.findIndex((f) => f.id === newFile.id);
+      if (index !== -1) {
+        this.files[index] = newFile;
+      } else {
+        this.files.push(newFile);
+      }
     }
-
     this.saveToStorage();
     this.notifyChangeListeners();
+  }
 
-    // Emit event to sync with other users in the room
-    const roomId = socketManager.getRoomId();
-    if (roomId) {
-      socketManager.connect().emit("file-created", {
-        roomId,
-        file: JSON.parse(JSON.stringify(newFile)), // Serialize to avoid issues
-        parentId,
-      });
+  // ------------------ Local Storage ------------------
+  private saveToStorage() {
+    if (typeof window !== "undefined") {
+      localStorage.setItem(this.getStorageKey(), JSON.stringify(this.files));
     }
   }
 
-  // Method to register a change listener
+  // ------------------ Change Listeners ------------------
   onFileSystemChange(listener: () => void): () => void {
     this.changeListeners.push(listener);
     return () => {
@@ -624,9 +538,15 @@ class FileSystem {
     };
   }
 
-  // Method to notify listeners of changes
+  // IMPORTANT: Force a new array reference so subscribers see a change
   private notifyChangeListeners(): void {
+    this.files = [...this.files];
     this.changeListeners.forEach((listener) => listener());
+  }
+
+  // NEW: Get serializable file structure (for sending over socket)
+  getSerializableFiles(): any[] {
+    return JSON.parse(JSON.stringify(this.files));
   }
 }
 
