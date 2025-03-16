@@ -281,7 +281,7 @@ export default function EditorPage() {
             {showChat && (
               <>
                 <ResizableHandle />
-                <ResizablePanel defaultSize={20}>
+                <ResizablePanel defaultSize={50}>
                   <Chat />
                 </ResizablePanel>
               </>
