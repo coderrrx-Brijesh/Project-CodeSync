@@ -10,6 +10,7 @@ import { Label } from './ui/label';
 import { socketManager } from '@/lib/socket';
 import { toast } from 'sonner';
 import { Users, Plus, LogIn } from 'lucide-react';
+import VideoCallToggle from './video-call-toggle';
 
 interface Message {
   id: string;
@@ -140,6 +141,7 @@ export function Chat() {
           <div ref={scrollRef} />
         </div>
       </ScrollArea>
+      <VideoCallToggle/>
       <div className="border-t p-4">
         <form onSubmit={handleSendMessage} className="flex space-x-2">
           <Input
