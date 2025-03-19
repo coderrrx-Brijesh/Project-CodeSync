@@ -3,6 +3,15 @@
 import { io, Socket } from "socket.io-client";
 import { v4 as uuidv4 } from "uuid";
 
+type VideoUser = {
+  userId: string;
+  socketId: string;
+};
+
+interface RTCPeerConnectionWithUserId extends RTCPeerConnection {
+  userId?: string;
+}
+
 class SocketManager {
   private static instance: SocketManager;
   private socket: Socket | null = null;
@@ -10,6 +19,12 @@ class SocketManager {
   private userId: string;
   private lastEmittedCode: string = ""; // Prevent loops on code synchronization
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private peerConnections: Map<string, RTCPeerConnectionWithUserId> = new Map();
+  private localStream: MediaStream | null = null;
+  private onUserJoinedVideoCallback: ((userId: string, socketId: string) => void) | null = null;
+  private onUserLeftVideoCallback: ((userId: string, socketId: string) => void) | null = null;
+  private onRemoteStreamCallback: ((userId: string, stream: MediaStream) => void) | null = null;
+
   private constructor() {
     this.userId = uuidv4();
   }
@@ -162,6 +177,79 @@ class SocketManager {
     this.socket.on("user-left", ({ userId }) => {
       console.log("User left:", userId);
     });
+
+    // ----- WebRTC Signaling -----
+    this.socket.on("all-video-users", ({ users, roomId }) => {
+      console.log("Received all video users in room:", users);
+      // Create peer connections for all existing users in the room
+      users.forEach((user: VideoUser) => {
+        if (user.userId !== this.userId) {
+          this.createPeerConnection(user.userId, user.socketId, true);
+        }
+      });
+    });
+
+    this.socket.on("user-joined-video", ({ userId, socketId }) => {
+      console.log("User joined video call:", userId, socketId);
+      // Create a peer connection for the new user
+      this.createPeerConnection(userId, socketId, false);
+      if (this.onUserJoinedVideoCallback) {
+        this.onUserJoinedVideoCallback(userId, socketId);
+      }
+    });
+
+    this.socket.on("user-left-video", ({ userId, socketId }) => {
+      console.log("User left video call:", userId, socketId);
+      // Clean up the peer connection with the user who left
+      this.closePeerConnection(socketId);
+      if (this.onUserLeftVideoCallback) {
+        this.onUserLeftVideoCallback(userId, socketId);
+      }
+    });
+
+    this.socket.on("offer", async ({ caller, sdp }) => {
+      console.log("Received offer from:", caller);
+      const peerConnection = this.peerConnections.get(caller);
+      if (peerConnection) {
+        try {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          const answer = await peerConnection.createAnswer();
+          await peerConnection.setLocalDescription(answer);
+          
+          this.socket?.emit("answer", {
+            target: caller,
+            caller: this.socket.id,
+            sdp: peerConnection.localDescription,
+          });
+        } catch (error) {
+          console.error("Error handling offer:", error);
+        }
+      }
+    });
+
+    this.socket.on("answer", async ({ caller, sdp }) => {
+      console.log("Received answer from:", caller);
+      const peerConnection = this.peerConnections.get(caller);
+      if (peerConnection) {
+        try {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+        } catch (error) {
+          console.error("Error handling answer:", error);
+        }
+      }
+    });
+
+    this.socket.on("ice-candidate", ({ caller, candidate }) => {
+      console.log("Received ICE candidate from:", caller);
+      const peerConnection = this.peerConnections.get(caller);
+      if (peerConnection) {
+        try {
+          peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (error) {
+          console.error("Error adding ICE candidate:", error);
+        }
+      }
+    });
   }
 
   createRoom(): string {
@@ -256,6 +344,149 @@ class SocketManager {
       color,
       clicking,
     });
+  }
+
+  // ----- Video Call Methods -----
+  async joinVideoCall(): Promise<MediaStream | null> {
+    if (!this.socket || !this.roomId) return null;
+    
+    try {
+      // Request user media
+      this.localStream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      
+      // Emit event to join the video call
+      this.socket.emit("join-video-call", {
+        roomId: this.roomId,
+        userId: this.userId,
+      });
+      
+      return this.localStream;
+    } catch (error) {
+      console.error("Error joining video call:", error);
+      return null;
+    }
+  }
+
+  leaveVideoCall(): void {
+    if (!this.socket || !this.roomId) return;
+    
+    // Stop all tracks in local stream
+    if (this.localStream) {
+      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream = null;
+    }
+    
+    // Close all peer connections
+    this.peerConnections.forEach((pc, socketId) => {
+      this.closePeerConnection(socketId);
+    });
+    
+    // Emit event to leave the video call
+    this.socket.emit("leave-video-call", {
+      roomId: this.roomId,
+      userId: this.userId,
+    });
+  }
+
+  private createPeerConnection(userId: string, socketId: string, isInitiator: boolean): RTCPeerConnectionWithUserId | null {
+    if (!this.socket || !this.localStream) return null;
+
+    // Check if we already have a connection with this peer
+    if (this.peerConnections.has(socketId)) {
+      return this.peerConnections.get(socketId) || null;
+    }
+
+    // ICE servers for STUN/TURN
+    const iceServers = {
+      iceServers: [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+        { urls: "stun:stun2.l.google.com:19302" },
+      ],
+    };
+
+    // Create a new RTCPeerConnection
+    const peerConnection: RTCPeerConnectionWithUserId = new RTCPeerConnection(iceServers);
+    peerConnection.userId = userId;
+    
+    // Add the local stream to the peer connection
+    this.localStream.getTracks().forEach(track => {
+      peerConnection.addTrack(track, this.localStream!);
+    });
+    
+    // Set up ICE candidate handling
+    peerConnection.onicecandidate = (event) => {
+      if (event.candidate) {
+        this.socket?.emit("ice-candidate", {
+          target: socketId,
+          caller: this.socket.id,
+          candidate: event.candidate,
+        });
+      }
+    };
+    
+    // Handle when a new remote stream is received
+    peerConnection.ontrack = (event) => {
+      if (event.streams && event.streams[0]) {
+        console.log("Received remote stream from:", userId);
+        if (this.onRemoteStreamCallback) {
+          this.onRemoteStreamCallback(userId, event.streams[0]);
+        }
+      }
+    };
+    
+    // Store the peer connection
+    this.peerConnections.set(socketId, peerConnection);
+    
+    // If initiator, create and send an offer
+    if (isInitiator) {
+      this.createAndSendOffer(socketId, peerConnection);
+    }
+    
+    return peerConnection;
+  }
+
+  private async createAndSendOffer(socketId: string, peerConnection: RTCPeerConnection): Promise<void> {
+    try {
+      const offer = await peerConnection.createOffer();
+      await peerConnection.setLocalDescription(offer);
+      
+      this.socket?.emit("offer", {
+        target: socketId,
+        caller: this.socket.id,
+        sdp: peerConnection.localDescription,
+      });
+    } catch (error) {
+      console.error("Error creating offer:", error);
+    }
+  }
+
+  private closePeerConnection(socketId: string): void {
+    const peerConnection = this.peerConnections.get(socketId);
+    if (peerConnection) {
+      peerConnection.close();
+      this.peerConnections.delete(socketId);
+    }
+  }
+
+  // Callbacks for video call events
+  setOnUserJoinedVideoCallback(callback: (userId: string, socketId: string) => void): void {
+    this.onUserJoinedVideoCallback = callback;
+  }
+
+  setOnUserLeftVideoCallback(callback: (userId: string, socketId: string) => void): void {
+    this.onUserLeftVideoCallback = callback;
+  }
+
+  setOnRemoteStreamCallback(callback: (userId: string, stream: MediaStream) => void): void {
+    this.onRemoteStreamCallback = callback;
+  }
+
+  getLocalStream(): MediaStream | null {
+    return this.localStream;
   }
 
   // ----- Heartbeat -----

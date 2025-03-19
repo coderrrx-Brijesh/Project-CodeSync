@@ -25,6 +25,9 @@ app.use(express.json());
 // Track active rooms
 const activeRooms = new Map();
 const socketToRoom = new Map();
+// Track users in video calls for each room
+const videoCallUsers = new Map();
+
 io.on("connection", (socket) => {
   console.log(`User Connected: ${socket.id}`);
 
@@ -125,6 +128,80 @@ io.on("connection", (socket) => {
     }
   );
 
+  // ----- WebRTC Signaling for Video Calls -----
+  socket.on("join-video-call", ({ roomId, userId }) => {
+    console.log(`User ${userId} is joining video call in room ${roomId}`);
+    
+    // Initialize users array for this room if it doesn't exist
+    if (!videoCallUsers.has(roomId)) {
+      videoCallUsers.set(roomId, []);
+    }
+    
+    const usersInRoom = videoCallUsers.get(roomId);
+    
+    // Send existing users to the joining user
+    socket.emit("all-video-users", {
+      users: usersInRoom,
+      roomId,
+    });
+    
+    // Add the joining user to the room's user list
+    const newUser = { userId, socketId: socket.id };
+    videoCallUsers.set(roomId, [...usersInRoom, newUser]);
+    
+    // Notify all users in the room about the new user
+    socket.to(roomId).emit("user-joined-video", {
+      userId,
+      socketId: socket.id,
+    });
+  });
+
+  socket.on("leave-video-call", ({ roomId, userId }) => {
+    console.log(`User ${userId} is leaving video call in room ${roomId}`);
+    
+    if (videoCallUsers.has(roomId)) {
+      // Remove the user from the room's user list
+      const usersInRoom = videoCallUsers.get(roomId);
+      const updatedUsers = usersInRoom.filter(user => user.socketId !== socket.id);
+      
+      if (updatedUsers.length === 0) {
+        videoCallUsers.delete(roomId);
+      } else {
+        videoCallUsers.set(roomId, updatedUsers);
+      }
+      
+      // Notify all users in the room that this user left
+      socket.to(roomId).emit("user-left-video", {
+        userId,
+        socketId: socket.id,
+      });
+    }
+  });
+
+  socket.on("offer", ({ target, caller, sdp }) => {
+    console.log(`Sending offer from ${caller} to ${target}`);
+    io.to(target).emit("offer", {
+      caller,
+      sdp,
+    });
+  });
+
+  socket.on("answer", ({ target, caller, sdp }) => {
+    console.log(`Sending answer from ${caller} to ${target}`);
+    io.to(target).emit("answer", {
+      caller,
+      sdp,
+    });
+  });
+
+  socket.on("ice-candidate", ({ target, candidate, caller }) => {
+    console.log(`Sending ICE candidate from ${caller} to ${target}`);
+    io.to(target).emit("ice-candidate", {
+      caller,
+      candidate,
+    });
+  });
+
   // ----- Disconnect -----
   socket.on("disconnect", () => {
     const roomId = socketToRoom.get(socket.id);
@@ -132,6 +209,29 @@ io.on("connection", (socket) => {
       const room = io.sockets.adapter.rooms.get(roomId);
       if (room) {
         io.to(roomId).emit("active-user-update", { activeUsers: room.size });
+      }
+      
+      // Handle disconnection from video call
+      if (videoCallUsers.has(roomId)) {
+        const usersInRoom = videoCallUsers.get(roomId);
+        const disconnectedUser = usersInRoom.find(user => user.socketId === socket.id);
+        
+        if (disconnectedUser) {
+          // Notify others in the room that this user left the video call
+          socket.to(roomId).emit("user-left-video", {
+            userId: disconnectedUser.userId,
+            socketId: socket.id,
+          });
+          
+          // Remove the user from the room's user list
+          const updatedUsers = usersInRoom.filter(user => user.socketId !== socket.id);
+          
+          if (updatedUsers.length === 0) {
+            videoCallUsers.delete(roomId);
+          } else {
+            videoCallUsers.set(roomId, updatedUsers);
+          }
+        }
       }
     }
     console.log("User Disconnected:", socket.id);
@@ -144,6 +244,7 @@ function cleanupRoomIfEmpty(roomId) {
   const room = io.sockets.adapter.rooms.get(roomId);
   if (!room || room.size === 0) {
     activeRooms.delete(roomId);
+    videoCallUsers.delete(roomId);
     console.log(`Room ${roomId} cleaned up (no active users)`);
   }
 }
