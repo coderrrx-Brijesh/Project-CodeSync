@@ -1,0 +1,5 @@
+langchain
+# langchain-anthropic
+langchain-groq
+flask
+python-dotenv
