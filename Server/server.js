@@ -1,14 +1,17 @@
 import express from "express";
 import cors from "cors";
 import { Server } from "socket.io";
-import http from "http";
-
+import https from "https";
+import fs from "fs"
 const app = express();
-const PORT = 3001;
+const PORT = process.env.NEXT_PUBLIC_SOCKET_PORT || 3001;
 
-const server = http.createServer(app);
+const key = fs.readFileSync('cert.key')
+const cert = fs.readFileSync('cert.crt')
 
-const io = new Server(server, {
+const expressServer = https.createServer({key,cert},app);
+
+const io = new Server(expressServer, {
   cors: {
     origin: "*", // Restrict in production for security
     methods: ["GET", "POST"],
@@ -249,6 +252,6 @@ function cleanupRoomIfEmpty(roomId) {
   }
 }
 
-server.listen(PORT, "0.0.0.0", () => {
+expressServer.listen(PORT, "0.0.0.0", () => {
   console.log(`Server is running on port ${PORT}`);
 });

@@ -99,6 +99,12 @@ const VideoCallToggle = () => {
   };
 
   const joinCall = async () => {
+    // Check if mediaDevices API is supported before attempting to join
+    if (typeof window !== 'undefined' && (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)) {
+      toast.error("Your browser doesn't support video calls. Please use Chrome, Firefox, or Edge.");
+      return;
+    }
+
     try {
       const stream = await socketManager.joinVideoCall();
       if (stream) {
@@ -108,11 +114,12 @@ const VideoCallToggle = () => {
           setIsOpen(true);
         }
       } else {
-        toast.error("Failed to access camera and microphone");
+        // More detailed error from socketManager
+        toast.error("Unable to join video call. Please check your camera and microphone permissions.");
       }
     } catch (error) {
       console.error("Error joining call:", error);
-      toast.error("Failed to join video call");
+      toast.error(error instanceof Error ? error.message : "Failed to join video call");
     }
   };
 

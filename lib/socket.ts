@@ -39,11 +39,13 @@ class SocketManager {
   connect(): Socket {
     if (!this.socket) {
       this.socket = io(
-        process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
+        process.env.NEXT_PUBLIC_SOCKET_URL || "https://localhost:3001",
         {
           transports: ["websocket", "polling"],
           reconnectionAttempts: Infinity,
           reconnectionDelay: 1000,
+          secure: true,
+          rejectUnauthorized: process.env.NODE_ENV === 'production'
         }
       );
       this.setupEventListeners();
@@ -70,11 +72,13 @@ class SocketManager {
         }
         this.socket.disconnect();
         this.socket = io(
-          process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:3001",
+          process.env.NEXT_PUBLIC_SOCKET_URL || "https://localhost:3001",
           {
-            transports: ["websocket"],
+            transports: ["websocket","polling"],
             reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
+            secure: true,
+            rejectUnauthorized: process.env.NODE_ENV === 'production'
           }
         );
         this.setupEventListeners();
@@ -83,11 +87,19 @@ class SocketManager {
 
     this.socket.on("connect_error", (error) => {
       console.error("Connection error:", error);
-      if (this.socket?.io?.engine?.transport) {
-        this.socket.io.engine.transport.close();
-        this.socket.disconnect();
-        this.socket.connect();
-      }
+      // Add a delay before attempting to reconnect to prevent rapid reconnection attempts
+      setTimeout(() => {
+        if (this.socket?.connected === false) {
+          console.log("Attempting to reconnect...");
+          // Close the current connection cleanly
+          if (this.socket?.io?.engine?.transport) {
+            this.socket.io.engine.transport.close();
+          }
+          this.socket?.disconnect();
+          // Reconnect after a short delay
+          this.socket?.connect();
+        }
+      }, 5000); // 5 second delay before reconnection attempt
     });
 
     // ----- Code Sync -----
@@ -351,6 +363,12 @@ class SocketManager {
     if (!this.socket || !this.roomId) return null;
     
     try {
+      // Check if we're in a browser environment with media device support
+      if (typeof window === 'undefined' || !navigator || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        console.error("MediaDevices API not supported in this environment");
+        throw new Error("Your browser doesn't support video calls. Please try using Chrome, Firefox, or Edge.");
+      }
+
       // Request user media
       this.localStream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -365,7 +383,24 @@ class SocketManager {
       
       return this.localStream;
     } catch (error) {
-      console.error("Error joining video call:", error);
+      // Provide more user-friendly error messages
+      let errorMessage = "Error joining video call";
+      
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+          errorMessage = "Camera or microphone access denied. Please allow access to use video calls.";
+        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+          errorMessage = "No camera or microphone found. Please connect a device and try again.";
+        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+          errorMessage = "Could not access your camera or microphone. They might be in use by another application.";
+        } else if (error.name === 'OverconstrainedError') {
+          errorMessage = "Your camera doesn't meet the required constraints.";
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+      }
+      
+      console.error(errorMessage, error);
       return null;
     }
   }
