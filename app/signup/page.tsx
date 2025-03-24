@@ -1,5 +1,6 @@
 "use client";
 
+import bcrypt from "bcryptjs";
 import { useState } from "react";
 import { useSession,signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -88,15 +89,18 @@ export default function SignUpPage() {
     
     try {
       // Implement API call for signup
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           firstName,
           lastName,
           email,
-          password
-        })
+          password: hashedPassword,
+        }),
       });
       
       const data = await response.json();
@@ -105,21 +109,26 @@ export default function SignUpPage() {
         throw new Error(data.message || "Something went wrong");
       }
       
+      // After successful signup, redirect to verification page with email parameter only
+      // Don't include the token as we don't want to try verification yet
+      router.push(`/verify-email?email=${encodeURIComponent(email)}&justSignedUp=true`);
+      return;
+      
       // Check if email verification is required
-      if (data.requiresVerification) {
-        // Redirect to email verification page
-        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
-        return;
-      }
+      // if (data.requiresVerification) {
+      //   // Redirect to email verification page with proper parameters
+      //   router.push(`/verify-email?token=${data.verifyToken}&email=${encodeURIComponent(email)}`);
+      //   return;
+      // }
       
-      // Auto-login after signup if no verification required
-      await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
+      // // Auto-login after signup if no verification required
+      // await signIn("credentials", {
+      //   email,
+      //   password,
+      //   redirect: false,
+      // });
       
-      router.push("/");
+      // router.push("/");
     } catch (err: any) {
       setError(err.message || "An error occurred during signup");
       setIsLoading(false);

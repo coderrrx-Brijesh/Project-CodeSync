@@ -30,22 +30,24 @@ export default function ForgotPasswordPage() {
     setError("");
     
     try {
-      // Implement password reset request logic here
-      // This is a mock implementation for demonstration
+      // Call the real API endpoint for password reset request
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       });
       
-      // Mock successful response
-      setTimeout(() => {
-        setIsLoading(false);
-        setSuccess(true);
-      }, 1500);
+      const data = await response.json();
       
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send reset link');
+      }
+      
+      // Show success state
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };

@@ -66,13 +66,22 @@ export default function ResetPasswordPage() {
       }
       
       try {
-        // In a real app, you would make an API call to verify the token
-        // Mock API call with a delay
-        setTimeout(() => {
-          // For demo, use a specific token as valid
-          setTokenValid(token === "demo-reset-token");
-        }, 1500);
+        // Call our API to verify the token
+        setTokenValid(null); // Set to loading state
+        
+        const response = await fetch(`/api/auth/reset-password?token=${token}`, {
+          method: 'GET',
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to verify token');
+        }
+        
+        setTokenValid(data.valid);
       } catch (err) {
+        console.error('Token verification failed:', err);
         setTokenValid(false);
       }
     };
@@ -100,22 +109,23 @@ export default function ResetPasswordPage() {
     }
     
     try {
-      // Implement password reset logic here
-      // This is a mock implementation for demonstration
+      // Call the real API endpoint for password reset
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password })
       });
       
-      // Mock successful response
-      setTimeout(() => {
-        setIsLoading(false);
-        setSuccess(true);
-      }, 1500);
+      const data = await response.json();
       
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
+      if (!response.ok) {
+        throw new Error(data.error || 'Password reset failed');
+      }
+      
+      setSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "An unexpected error occurred. Please try again.");
+    } finally {
       setIsLoading(false);
     }
   };
