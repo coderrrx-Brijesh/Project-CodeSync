@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,25 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="container max-w-md mx-auto py-10">
+        <Card>
+          <CardHeader className="space-y-1 text-center">
+            <CardTitle className="text-2xl">Loading...</CardTitle>
+            <CardDescription>
+              Please wait while we load the page
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}
+
+function ResetPasswordContent() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
