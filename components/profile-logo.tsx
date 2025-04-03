@@ -67,7 +67,7 @@ const ProfileLogo = () => {
             "
           >
             <AvatarImage
-              src={session?.user?.image || "/default-avatar.png"}
+              src={session?.user?.image || ""}
               alt="Profile"
             />
             <AvatarFallback className="bg-gray-700 text-white">
@@ -102,7 +102,7 @@ const ProfileLogo = () => {
         {/* USER INFO */}
         <div className="p-4">
           <p className="text-base font-semibold">
-            {session?.user?.name || "User"}
+            {session?.user?.name || session?.user?.firstName + " " + session?.user?.lastName || "User"}
           </p>
           <p className="text-sm text-gray-400">
             {session?.user?.email}

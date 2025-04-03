@@ -36,15 +36,16 @@ const ProfilePage = () => {
     }
     if (session?.user) {
       const sessionUser = session.user as User;
+      console.log(sessionUser);
       setUser({
-        name: sessionUser.name || "",
+        name: sessionUser.name || sessionUser.firstName + " " + sessionUser.lastName || "",
         email: sessionUser.email || "",
-        image: sessionUser.image || "/default-avatar.png",
+        image: sessionUser.image,
         location: sessionUser.location || "",
         website: sessionUser.website || "",
         bio: sessionUser.bio || "",
       });
-      setAvatarPreview(sessionUser.image || "/default-avatar.png");
+      setAvatarPreview(sessionUser.image || "");
     }
   }, [session, status, router]);
 
@@ -72,12 +73,12 @@ const ProfilePage = () => {
       setUser({
         name: sessionUser.name || "",
         email: sessionUser.email || "",
-        image: sessionUser.image || "/default-avatar.png",
+        image: sessionUser.image,
         location: sessionUser.location || "",
         website: sessionUser.website || "",
         bio: sessionUser.bio || "",
       });
-      setAvatarPreview(sessionUser.image || "/default-avatar.png");
+      setAvatarPreview(sessionUser.image || "" );
     }
     setEditMode((prev) => !prev);
     setAvatarFile(null);
@@ -165,20 +166,6 @@ const ProfilePage = () => {
                             <div>
                             <h3 className="text-xs font-bold uppercase mb-1">Bio:</h3>
                             <p className="text-sm font-light">{user.bio}</p>
-                            </div>
-                        )}
-
-                        {extraFields.length > 0 && (
-                            <div>
-                            <h3 className="text-xs font-bold uppercase mb-2">Additional Info:</h3>
-                            <ul className="space-y-1">
-                                {extraFields.map((field) => (
-                                <li key={field} className="text-sm font-light">
-                                    <span className="font-semibold">{field}:</span>{" "}
-                                    {String((session.user as any)[field])}
-                                </li>
-                                ))}
-                            </ul>
                             </div>
                         )}
                     </div>
