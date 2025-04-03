@@ -19,58 +19,20 @@ import {
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import ProfileLogo from "@/components/profile-logo";
-import { motion } from "framer-motion";
+import { motion, Variants, RepeatType } from "framer-motion";
+import {
+  containerVariants,
+  itemVariants,
+  featureVariants,
+  pulseVariants,
+  logoAnimation,
+  scrollIndicatorAnimation,
+  createCursorAnimation
+} from "@/lib/animation-types";
+import router from "next/router";
 
 export default function Home() {
   const { data: session, status } = useSession();
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-        delayChildren: 0.3,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: { type: "spring", stiffness: 300, damping: 24 },
-    },
-  };
-
-  const featureVariants = {
-    offscreen: {
-      y: 50,
-      opacity: 0,
-    },
-    onscreen: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        bounce: 0.4,
-        duration: 0.8,
-      },
-    },
-  };
-
-  const pulseVariants = {
-    pulse: {
-      scale: [1, 1.05, 1],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        repeatType: "reverse",
-      },
-    },
-  };
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/30 overflow-hidden">
@@ -117,15 +79,8 @@ export default function Home() {
         <motion.div variants={itemVariants} className="relative w-full mb-6">
           <div className="flex flex-row justify-center">
             <motion.div
-              animate={{
-                rotate: [0, 10, 0, -10, 0],
-                scale: [1, 1.1, 1],
-              }}
-              transition={{
-                duration: 5,
-                repeat: Infinity,
-                repeatType: "reverse",
-              }}
+              animate={logoAnimation.animate}
+              transition={logoAnimation.transition}
               className="mr-2"
             >
               <Code2 className="h-16 w-16 text-primary" />
@@ -172,8 +127,8 @@ export default function Home() {
       {/* Scroll Down Indicator */}
       <div className="flex justify-center mb-8">
         <motion.div
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 1.5, repeat: Infinity }}
+          animate={scrollIndicatorAnimation.animate}
+          transition={scrollIndicatorAnimation.transition}
           className="flex flex-col items-center gap-2 text-muted-foreground"
         >
           <span className="text-sm">Discover Features</span>
@@ -254,16 +209,10 @@ export default function Home() {
                       
                       {/* User 1 cursor - Canva style */}
                       <motion.div 
-                        initial={{ left: 10, top: 0 }}
-                        animate={{ 
-                          left: [10, 150, 200, 150, 10],
-                          top: [0, 0, 0, 0, 0]
-                        }}
-                        transition={{ 
-                          duration: 5,
-                          repeat: Infinity,
-                          repeatType: "loop"
-                        }}
+                        {...createCursorAnimation(
+                          [[10, 150, 200, 150, 10], [0, 0, 0, 0, 0]], 
+                          5
+                        )}
                         className="absolute z-10"
                       >
                         {/* Typing cursor with name at top right */}
@@ -279,16 +228,10 @@ export default function Home() {
 
                       {/* User 1 - Mouse cursor floating separately */}
                       <motion.div 
-                        initial={{ left: 50, top: 30 }}
-                        animate={{ 
-                          left: [50, 100, 150, 80, 50],
-                          top: [30, 40, 60, 50, 30]
-                        }}
-                        transition={{ 
-                          duration: 8,
-                          repeat: Infinity,
-                          repeatType: "loop"
-                        }}
+                        {...createCursorAnimation(
+                          [[50, 100, 150, 80, 50], [30, 40, 60, 50, 30]], 
+                          8
+                        )}
                         className="absolute z-20"
                       >
                         <div className="relative">
@@ -305,7 +248,7 @@ export default function Home() {
                     </div>
                     
                     <div className="ml-4 relative">
-                      <span className="text-purple-400">return</span> <span className="text-foreground">items.</span><span className="text-yellow-300">reduce</span><span className="text-foreground">((</span><span className="text-orange-300">sum</span><span className="text-foreground">, </span><span className="text-orange-300">item</span><span className="text-foreground">) => {`{`}</span>
+                      <span className="text-purple-400">return</span> <span className="text-foreground">items.</span><span className="text-yellow-300">reduce</span><span className="text-foreground">((</span><span className="text-orange-300">sum</span><span className="text-foreground">, </span><span className="text-orange-300">item</span><span className="text-foreground">) {"=> {"}</span>
                       
                       {/* User 2 cursor with selection effect - Canva style */}
                       <motion.div
@@ -317,16 +260,10 @@ export default function Home() {
                       
                       {/* User 2 - Typing cursor */}
                       <motion.div 
-                        initial={{ left: 220, top: 2 }}
-                        animate={{ 
-                          left: [220, 60, 60, 180, 220],
-                          top: [2, 2, 2, 2, 2]
-                        }}
-                        transition={{ 
-                          duration: 8,
-                          repeat: Infinity,
-                          repeatType: "loop"
-                        }}
+                        {...createCursorAnimation(
+                          [[220, 60, 60, 180, 220], [2, 2, 2, 2, 2]], 
+                          8
+                        )}
                         className="absolute z-10"
                       >
                         {/* Typing cursor with name at top right */}
@@ -342,17 +279,11 @@ export default function Home() {
 
                       {/* User 2 - Mouse cursor floating separately */}
                       <motion.div 
-                        initial={{ left: 80, top: 20 }}
-                        animate={{ 
-                          left: [80, 120, 200, 140, 80],
-                          top: [20, 35, 15, 5, 20]
-                        }}
-                        transition={{ 
-                          duration: 7,
-                          repeat: Infinity,
-                          repeatType: "loop",
-                          delay: 0.5
-                        }}
+                        {...createCursorAnimation(
+                          [[80, 120, 200, 140, 80], [20, 35, 15, 5, 20]], 
+                          7,
+                          0.5
+                        )}
                         className="absolute z-20"
                       >
                         <div className="relative">
@@ -374,17 +305,11 @@ export default function Home() {
 
                       {/* User 3 - Mouse cursor floating separately */}
                       <motion.div 
-                        initial={{ left: 180, top: 25 }}
-                        animate={{ 
-                          left: [180, 240, 140, 100, 180],
-                          top: [25, 15, 40, 20, 25]
-                        }}
-                        transition={{ 
-                          duration: 9,
-                          repeat: Infinity,
-                          repeatType: "loop",
-                          delay: 1.5
-                        }}
+                        {...createCursorAnimation(
+                          [[180, 240, 140, 100, 180], [25, 15, 40, 20, 25]], 
+                          9,
+                          1.5
+                        )}
                         className="absolute z-20"
                       >
                         <div className="relative">
@@ -524,10 +449,10 @@ export default function Home() {
                       transition={{ delay: 3, duration: 0.5 }}
                     >
                       <div className="ml-4">&nbsp;</div>
-                      <div className="ml-4"><span className="text-purple-400">useEffect</span><span className="text-foreground">(() => {`{`}</span></div>
+                      <div className="ml-4"><span className="text-purple-400">useEffect</span><span className="text-foreground">{"(() => {"}</span></div>
                       <div className="ml-8"><span className="text-foreground">// Load user data from API</span></div>
                       <div className="ml-8 relative">
-                        <span className="text-purple-400">const</span> <span className="text-blue-300">loadUserData</span> <span className="text-foreground">= </span><span className="text-purple-400">async</span><span className="text-foreground">() => {`{`}</span>
+                        <span className="text-purple-400">const</span> <span className="text-blue-300">loadUserData</span> <span className="text-foreground">= </span><span className="text-purple-400">async</span><span className="text-foreground">{"() => {"}</span>
                         
                         {/* Current typing cursor */}
                         <motion.div
@@ -1423,11 +1348,11 @@ export default function Home() {
                             <span className="text-muted-foreground">auth.tsx, line 42-46</span>
                           </div>
                           <div className="font-mono bg-black/30 p-2 rounded text-[10px] text-green-300">
-                            const refreshToken = async () => {`{`}<br />
+                            const refreshToken = async () {"=> {"}<br />
                             &nbsp;&nbsp;if (isRefreshing) return await tokenPromise;<br />
                             &nbsp;&nbsp;tokenPromise = performRefresh();<br />
                             &nbsp;&nbsp;return await tokenPromise;<br />
-                            {`}`}
+                            {"}"}
                           </div>
                         </div>
                       </div>
@@ -1747,14 +1672,14 @@ export default function Home() {
                     }}
                     className="absolute inset-0 bg-primary/10 overflow-hidden whitespace-nowrap"
                   >
-                    <span className="text-blue-400">const</span> <span className="text-green-400">syncChanges</span> <span className="text-foreground">= () => {'{'}</span>
+                    <span className="text-blue-400">const</span> <span className="text-green-400">syncChanges</span> <span className="text-foreground">= () {"=> {"}</span>
                     <span className="text-purple-400"> socket</span><span className="text-foreground">.</span><span className="text-green-400">emit</span><span className="text-foreground">(</span><span className="text-yellow-400">'code:update'</span><span className="text-foreground">, code);</span> <span className="text-foreground">{'}'};</span>
                     
                     {/* Maria typing cursor at the end of the line */}
                     <div className="inline-block relative ml-1 w-1">
                     </div>
                   </motion.div>
-                  <span className="invisible">const syncChanges = () => {" socket.emit('code:update', code); "};</span>
+                  <span className="invisible">const syncChanges = () {"=> {"} socket.emit('code:update', code); {"}"};</span>
                 </div>
               </div>
             </div>
@@ -1926,7 +1851,9 @@ export default function Home() {
             className="relative z-10"
           >
             <Button className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg">
+            <Link href="/editor">
               Start Coding Together
+            </Link>
             </Button>
           </motion.div>
         </motion.div>
