@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import {
@@ -24,7 +24,35 @@ import { Label } from "@/components/ui/label";
 import { sendVerificationEmail } from "@/lib/send-verification-email";
 import emailjs from "@emailjs/browser";
 
-export default function VerifyEmailPage() {
+// Loading component for Suspense fallback
+function VerificationLoading() {
+  return (
+    <div className="flex items-center justify-center min-h-[80vh] py-8 px-4">
+      <Card className="border-border/40 shadow-lg w-full max-w-md">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl text-center">
+            Email Verification
+          </CardTitle>
+          <CardDescription className="text-center">
+            Loading verification page...
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-6 flex flex-col items-center text-center gap-4">
+            <div className="h-12 w-12 rounded-full border-4 border-white border-t-transparent animate-spin"></div>
+            <h3 className="text-xl font-semibold">Loading</h3>
+            <p className="text-muted-foreground">
+              Please wait while we prepare the verification page...
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Main component that uses useSearchParams
+function VerifyEmailContent() {
   const [verificationState, setVerificationState] = useState<
     "loading" | "success" | "error" | "resend" | "justSignedUp"
   >("loading");
@@ -388,5 +416,14 @@ export default function VerifyEmailPage() {
         </motion.div>
       </motion.div>
     </div>
+  );
+}
+
+// Wrap in Suspense and export default component
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerificationLoading />}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }
