@@ -2,14 +2,24 @@
 
 import bcrypt from "bcryptjs";
 import { useState } from "react";
-import { useSession,signIn } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { ArrowRight, Github, Mail, Lock, User, AlertCircle, Check, Info, Facebook } from "lucide-react";
+import {
+  ArrowRight,
+  Github,
+  Mail,
+  Lock,
+  User,
+  AlertCircle,
+  Check,
+  Info,
+  Facebook,
+} from "lucide-react";
 import Link from "next/link";
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
@@ -18,13 +28,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
+import { sendVerificationEmail } from "@/lib/send-verification-email";
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState("");
@@ -53,7 +64,7 @@ export default function SignUpPage() {
     if (hasLowercase) strength++;
     if (hasNumber) strength++;
     if (hasSpecialChar) strength++;
-    
+
     setPasswordStrength(strength);
   };
 
@@ -86,7 +97,7 @@ export default function SignUpPage() {
       setIsLoading(false);
       return;
     }
-    
+
     try {
       // Implement API call for signup
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -102,33 +113,30 @@ export default function SignUpPage() {
           password: hashedPassword,
         }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.message || "Something went wrong");
       }
-      
-      // After successful signup, redirect to verification page with email parameter only
-      // Don't include the token as we don't want to try verification yet
-      router.push(`/verify-email?email=${encodeURIComponent(email)}&justSignedUp=true`);
-      return;
-      
-      // Check if email verification is required
-      // if (data.requiresVerification) {
-      //   // Redirect to email verification page with proper parameters
-      //   router.push(`/verify-email?token=${data.verifyToken}&email=${encodeURIComponent(email)}`);
-      //   return;
-      // }
-      
-      // // Auto-login after signup if no verification required
-      // await signIn("credentials", {
-      //   email,
-      //   password,
-      //   redirect: false,
-      // });
-      
-      // router.push("/");
+
+      // Send verification email
+      try {
+        console.log("Sending verification email: ", data);
+        const emailResponse = await sendVerificationEmail({
+          firstName: data.firstName,
+          email: data.email,
+          verifyToken: data.verifyToken,
+        });
+        console.log("Email response: ", emailResponse);
+      } catch (emailError) {
+        console.error("Error sending verification email:", email, emailError);
+      }
+
+      // Always redirect to verification page after signup, regardless of email status
+      router.push(
+        `/verify-email?email=${encodeURIComponent(email)}&justSignedUp=true`
+      );
     } catch (err: any) {
       setError(err.message || "An error occurred during signup");
       setIsLoading(false);
@@ -167,7 +175,9 @@ export default function SignUpPage() {
         className="w-full max-w-md space-y-6"
       >
         <motion.div variants={itemVariants} className="text-center space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Create an account</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Create an account
+          </h1>
           <p className="text-muted-foreground">
             Join CodeSync to start collaborating in real-time
           </p>
@@ -183,8 +193,8 @@ export default function SignUpPage() {
             </CardHeader>
             <CardContent>
               {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive flex gap-2 items-start"
                 >
@@ -192,7 +202,7 @@ export default function SignUpPage() {
                   <span>{error}</span>
                 </motion.div>
               )}
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
@@ -212,7 +222,7 @@ export default function SignUpPage() {
                       />
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="lastName" className="text-sm font-medium">
                       Last Name
@@ -231,7 +241,7 @@ export default function SignUpPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-sm font-medium">
                     Email
@@ -249,7 +259,7 @@ export default function SignUpPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="password" className="text-sm font-medium">
                     Password
@@ -266,65 +276,122 @@ export default function SignUpPage() {
                       required
                     />
                   </div>
-                  
+
                   {password && (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
+                      animate={{ opacity: 1, height: "auto" }}
                       className="mt-2 space-y-1 text-xs"
                     >
                       <div className="flex gap-1 mb-1">
-                        <div className={`h-1 flex-1 rounded-lg ${passwordStrength > 0 ? 'bg-destructive' : 'bg-border'}`}></div>
-                        <div className={`h-1 flex-1 rounded-lg ${passwordStrength > 1 ? 'bg-orange-500' : 'bg-border'}`}></div>
-                        <div className={`h-1 flex-1 rounded-lg ${passwordStrength > 2 ? 'bg-yellow-500' : 'bg-border'}`}></div>
-                        <div className={`h-1 flex-1 rounded-lg ${passwordStrength > 3 ? 'bg-green-500' : 'bg-border'}`}></div>
-                        <div className={`h-1 flex-1 rounded-lg ${passwordStrength > 4 ? 'bg-green-700' : 'bg-border'}`}></div>
+                        <div
+                          className={`h-1 flex-1 rounded-lg ${passwordStrength > 0 ? "bg-destructive" : "bg-border"}`}
+                        ></div>
+                        <div
+                          className={`h-1 flex-1 rounded-lg ${passwordStrength > 1 ? "bg-orange-500" : "bg-border"}`}
+                        ></div>
+                        <div
+                          className={`h-1 flex-1 rounded-lg ${passwordStrength > 2 ? "bg-yellow-500" : "bg-border"}`}
+                        ></div>
+                        <div
+                          className={`h-1 flex-1 rounded-lg ${passwordStrength > 3 ? "bg-green-500" : "bg-border"}`}
+                        ></div>
+                        <div
+                          className={`h-1 flex-1 rounded-lg ${passwordStrength > 4 ? "bg-green-700" : "bg-border"}`}
+                        ></div>
                       </div>
-                      <p className="text-muted-foreground text-xs">Password strength: {
-                        passwordStrength === 0 ? "Very weak" :
-                        passwordStrength === 1 ? "Weak" :
-                        passwordStrength === 2 ? "Fair" :
-                        passwordStrength === 3 ? "Good" :
-                        passwordStrength === 4 ? "Strong" : "Very strong"
-                      }</p>
+                      <p className="text-muted-foreground text-xs">
+                        Password strength:{" "}
+                        {passwordStrength === 0
+                          ? "Very weak"
+                          : passwordStrength === 1
+                            ? "Weak"
+                            : passwordStrength === 2
+                              ? "Fair"
+                              : passwordStrength === 3
+                                ? "Good"
+                                : passwordStrength === 4
+                                  ? "Strong"
+                                  : "Very strong"}
+                      </p>
                       <ul className="space-y-1 mt-2">
                         <li className="flex items-center gap-1">
-                          {minLength ? 
-                            <Check className="h-3 w-3 text-green-500" /> : 
-                            <Info className="h-3 w-3 text-muted-foreground" />} 
-                          <span className={minLength ? "text-green-500" : "text-muted-foreground"}>
+                          {minLength ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span
+                            className={
+                              minLength
+                                ? "text-green-500"
+                                : "text-muted-foreground"
+                            }
+                          >
                             At least 8 characters
                           </span>
                         </li>
                         <li className="flex items-center gap-1">
-                          {hasUppercase ? 
-                            <Check className="h-3 w-3 text-green-500" /> : 
-                            <Info className="h-3 w-3 text-muted-foreground" />} 
-                          <span className={hasUppercase ? "text-green-500" : "text-muted-foreground"}>
+                          {hasUppercase ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span
+                            className={
+                              hasUppercase
+                                ? "text-green-500"
+                                : "text-muted-foreground"
+                            }
+                          >
                             Uppercase letter (A-Z)
                           </span>
                         </li>
                         <li className="flex items-center gap-1">
-                          {hasLowercase ? 
-                            <Check className="h-3 w-3 text-green-500" /> : 
-                            <Info className="h-3 w-3 text-muted-foreground" />} 
-                          <span className={hasLowercase ? "text-green-500" : "text-muted-foreground"}>
+                          {hasLowercase ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span
+                            className={
+                              hasLowercase
+                                ? "text-green-500"
+                                : "text-muted-foreground"
+                            }
+                          >
                             Lowercase letter (a-z)
                           </span>
                         </li>
                         <li className="flex items-center gap-1">
-                          {hasNumber ? 
-                            <Check className="h-3 w-3 text-green-500" /> : 
-                            <Info className="h-3 w-3 text-muted-foreground" />} 
-                          <span className={hasNumber ? "text-green-500" : "text-muted-foreground"}>
+                          {hasNumber ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span
+                            className={
+                              hasNumber
+                                ? "text-green-500"
+                                : "text-muted-foreground"
+                            }
+                          >
                             Number (0-9)
                           </span>
                         </li>
                         <li className="flex items-center gap-1">
-                          {hasSpecialChar ? 
-                            <Check className="h-3 w-3 text-green-500" /> : 
-                            <Info className="h-3 w-3 text-muted-foreground" />} 
-                          <span className={hasSpecialChar ? "text-green-500" : "text-muted-foreground"}>
+                          {hasSpecialChar ? (
+                            <Check className="h-3 w-3 text-green-500" />
+                          ) : (
+                            <Info className="h-3 w-3 text-muted-foreground" />
+                          )}
+                          <span
+                            className={
+                              hasSpecialChar
+                                ? "text-green-500"
+                                : "text-muted-foreground"
+                            }
+                          >
                             Special character (!@#$%^&*)
                           </span>
                         </li>
@@ -332,9 +399,12 @@ export default function SignUpPage() {
                     </motion.div>
                   )}
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword" className="text-sm font-medium">
+                  <Label
+                    htmlFor="confirmPassword"
+                    className="text-sm font-medium"
+                  >
                     Confirm Password
                   </Label>
                   <div className="relative">
@@ -345,39 +415,62 @@ export default function SignUpPage() {
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className={`pl-10 ${confirmPassword && password !== confirmPassword ? 'border-destructive' : ''}`}
+                      className={`pl-10 ${confirmPassword && password !== confirmPassword ? "border-destructive" : ""}`}
                       required
                     />
                   </div>
                   {confirmPassword && password !== confirmPassword && (
-                    <p className="text-destructive text-xs mt-1">Passwords do not match</p>
+                    <p className="text-destructive text-xs mt-1">
+                      Passwords do not match
+                    </p>
                   )}
                 </div>
-                
+
                 <div className="flex items-start space-x-2">
-                  <Checkbox 
-                    id="terms" 
+                  <Checkbox
+                    id="terms"
                     checked={agreeToTerms}
-                    onCheckedChange={(checked) => setAgreeToTerms(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setAgreeToTerms(checked === true)
+                    }
                     className="mt-1"
                   />
-                  <Label 
-                    htmlFor="terms" 
+                  <Label
+                    htmlFor="terms"
                     className="text-sm text-muted-foreground font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    I agree to the <Link href="/terms" className="text-primary hover:underline">Terms of Service</Link> and <Link href="/privacy" className="text-primary hover:underline">Privacy Policy</Link>
+                    I agree to the{" "}
+                    <Link
+                      href="/terms"
+                      className="text-primary hover:underline"
+                    >
+                      Terms of Service
+                    </Link>{" "}
+                    and{" "}
+                    <Link
+                      href="/privacy"
+                      className="text-primary hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
                   </Label>
                 </div>
-                
-                <Button 
-                  type="submit" 
-                  className="w-full font-medium" 
-                  disabled={isLoading || !agreeToTerms || password !== confirmPassword}
+
+                <Button
+                  type="submit"
+                  className="w-full font-medium"
+                  disabled={
+                    isLoading || !agreeToTerms || password !== confirmPassword
+                  }
                 >
                   {isLoading ? (
                     <motion.div
                       animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
                       className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"
                     />
                   ) : (
@@ -389,7 +482,7 @@ export default function SignUpPage() {
                 </Button>
               </form>
             </CardContent>
-            
+
             <div className="relative my-2">
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-border/60" />
@@ -400,13 +493,13 @@ export default function SignUpPage() {
                 </span>
               </div>
             </div>
-            
+
             <CardFooter className="flex flex-col space-y-2 pt-0">
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => signIn("github", { callbackUrl: "/" })}
                       className="w-full"
                     >
@@ -419,12 +512,12 @@ export default function SignUpPage() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => signIn("google", { callbackUrl: "/" })}
                       className="w-full"
                     >
@@ -455,12 +548,12 @@ export default function SignUpPage() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              
+
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       onClick={() => signIn("facebook", { callbackUrl: "/" })}
                       className="w-full"
                     >
@@ -476,13 +569,16 @@ export default function SignUpPage() {
             </CardFooter>
           </Card>
         </motion.div>
-        
-        <motion.p 
-          variants={itemVariants} 
+
+        <motion.p
+          variants={itemVariants}
           className="text-center text-sm text-muted-foreground"
         >
           Already have an account?{" "}
-          <Link href="/signin" className="text-primary font-medium hover:underline">
+          <Link
+            href="/signin"
+            className="text-primary font-medium hover:underline"
+          >
             Sign in
           </Link>
         </motion.p>

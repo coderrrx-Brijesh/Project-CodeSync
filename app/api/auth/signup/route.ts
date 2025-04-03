@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import User from "@/models/userModel";
 import { connectDB } from "@/config/dbConfig";
 import crypto from "crypto";
-import { sendVerificationEmail } from "@/lib/send-verification-email";
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,23 +56,13 @@ export async function POST(request: NextRequest) {
     // Save user to database
     await newUser.save();
 
-    // Send verification email
-    try {
-      await sendVerificationEmail({
-        firstName,
-        email,
-        verifyToken
-      });
-    } catch (emailError) {
-      console.error("Error sending verification email:", emailError);
-      // Continue with registration even if email fails
-      // We'll let the user request a new verification email if needed
-    }
-
     // Return success without exposing the token directly in the response
     return NextResponse.json(
       { 
-        message: "Registration successful! Please check your email for verification.", 
+        message: "Registration successful! Please verify your email.", 
+        firstName,
+        email,
+        verifyToken,
         requiresVerification: true,
         success: true
       },
