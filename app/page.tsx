@@ -266,26 +266,41 @@ export default function Home() {
                         }}
                         className="absolute z-10"
                       >
-                        {/* Cursor flag with name */}
-                        <div className="absolute -top-8 -left-1 flex flex-col items-center">
-                          <div className="px-2 py-1 rounded-md bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                        {/* Typing cursor with name at top right */}
+                        <div className="flex items-center">
+                          {/* Vertical I-beam cursor */}
+                          <div className="h-5 w-0.5 bg-blue-500"></div>
+                          {/* Name label */}
+                          <div className="absolute -top-6 left-2 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
                             Alex
                           </div>
-                          <div className="w-2 h-2 bg-blue-500 rotate-45 mt-[1px]"></div>
                         </div>
-                        {/* Cursor I-beam */}
-                        <div className="h-5 w-0.5 bg-blue-500"></div>
-                        {/* Mouse cursor */}
-                        <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className="absolute -left-2 -top-2"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
-                            <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1" />
+                      </motion.div>
+
+                      {/* User 1 - Mouse cursor floating separately */}
+                      <motion.div 
+                        initial={{ left: 50, top: 30 }}
+                        animate={{ 
+                          left: [50, 100, 150, 80, 50],
+                          top: [30, 40, 60, 50, 30]
+                        }}
+                        transition={{ 
+                          duration: 8,
+                          repeat: Infinity,
+                          repeatType: "loop"
+                        }}
+                        className="absolute z-20"
+                      >
+                        <div className="relative">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
+                            <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1.5" />
                           </svg>
-                        </motion.div>
+                          
+                          {/* Mouse cursor name below */}
+                          <div className="absolute -bottom-6 left-0 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                            Alex
+                          </div>
+                        </div>
                       </motion.div>
                     </div>
                     
@@ -300,6 +315,7 @@ export default function Home() {
                         className="absolute -top-1 left-[60px] right-[120px] h-7 bg-green-500/20 rounded-sm border-l-2 border-r-2 border-green-500/70"
                       />
                       
+                      {/* User 2 - Typing cursor */}
                       <motion.div 
                         initial={{ left: 220, top: 2 }}
                         animate={{ 
@@ -313,48 +329,73 @@ export default function Home() {
                         }}
                         className="absolute z-10"
                       >
-                        {/* Cursor flag with name */}
-                        <div className="absolute -top-8 -left-1 flex flex-col items-center">
-                          <div className="px-2 py-1 rounded-md bg-green-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                        {/* Typing cursor with name at top right */}
+                        <div className="flex items-center">
+                          {/* Vertical I-beam cursor */}
+                          <div className="h-5 w-0.5 bg-green-500"></div>
+                          {/* Name label */}
+                          <div className="absolute -top-6 left-2 px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] whitespace-nowrap shadow-md">
                             Maria
                           </div>
-                          <div className="w-2 h-2 bg-green-500 rotate-45 mt-[1px]"></div>
                         </div>
-                        {/* Cursor I-beam */}
-                        <div className="h-5 w-0.5 bg-green-500"></div>
-                        {/* Mouse cursor */}
-                        <motion.div 
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.2 }}
-                          className="absolute -left-2 -top-2"
-                        >
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-green-500">
-                            <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1" />
+                      </motion.div>
+
+                      {/* User 2 - Mouse cursor floating separately */}
+                      <motion.div 
+                        initial={{ left: 80, top: 20 }}
+                        animate={{ 
+                          left: [80, 120, 200, 140, 80],
+                          top: [20, 35, 15, 5, 20]
+                        }}
+                        transition={{ 
+                          duration: 7,
+                          repeat: Infinity,
+                          repeatType: "loop",
+                          delay: 0.5
+                        }}
+                        className="absolute z-20"
+                      >
+                        <div className="relative">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-green-500">
+                            <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1.5" />
                           </svg>
-                        </motion.div>
+                          
+                          {/* Mouse cursor name below */}
+                          <div className="absolute -bottom-6 left-0 px-2 py-0.5 rounded-full bg-green-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                            Maria
+                          </div>
+                        </div>
                       </motion.div>
                     </div>
 
                     <div className="ml-8 relative">
                       <span className="text-purple-400">return</span> <span className="text-foreground">sum + item.</span><span className="text-blue-300">price</span><span className="text-foreground">;</span>
                       
-                      {/* User 3 cursor */}
+
+                      {/* User 3 - Mouse cursor floating separately */}
                       <motion.div 
-                        initial={{ left: 100 }}
+                        initial={{ left: 180, top: 25 }}
                         animate={{ 
-                          left: [100, 220, 240, 220, 100],
+                          left: [180, 240, 140, 100, 180],
+                          top: [25, 15, 40, 20, 25]
                         }}
                         transition={{ 
-                          duration: 6,
+                          duration: 9,
                           repeat: Infinity,
                           repeatType: "loop",
-                          delay: 1
+                          delay: 1.5
                         }}
-                        className="absolute h-5 w-2 bg-pink-500 opacity-80"
+                        className="absolute z-20"
                       >
-                        <div className="absolute -top-6 -left-1 px-2 py-1 rounded text-[10px] bg-pink-500 text-white whitespace-nowrap">
-                          Sarah
+                        <div className="relative">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-500">
+                            <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1.5" />
+                          </svg>
+                          
+                          {/* Mouse cursor name below */}
+                          <div className="absolute -bottom-6 left-0 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                            Sarah
+                          </div>
                         </div>
                       </motion.div>
                     </div>
@@ -1531,7 +1572,7 @@ export default function Home() {
           whileInView={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
           viewport={{ once: true }}
-          className="relative max-w-5xl mx-auto backdrop-blur-sm bg-black/30 rounded-xl border border-white/10 overflow-hidden shadow-2xl"
+          className="relative max-w-5xl h-[500px] mx-auto backdrop-blur-sm bg-black/30 rounded-xl border border-white/10 overflow-hidden shadow-2xl"
         >
           {/* Editor Top Bar */}
           <div className="flex items-center bg-black/50 px-4 py-2">
@@ -1561,6 +1602,8 @@ export default function Home() {
                   <span className="text-purple-400">function </span>
                   <span className="text-yellow-300">CodeSyncApp</span>
                   <span className="text-foreground">() {'{'}</span>
+                  
+                  {/* Alex typing cursor (fixed with name at top right) */}
                   <motion.div 
                     initial={{ opacity: 0, left: -20 }}
                     animate={{ 
@@ -1577,44 +1620,41 @@ export default function Home() {
                     }}
                     className="absolute top-0 z-10"
                   >
-                    {/* Cursor flag with name */}
-                    <motion.div 
-                      className="absolute -top-8 -left-1 flex flex-col items-center"
-                      animate={{ y: [0, -2, 0] }}
-                      transition={{ 
-                        duration: 1.5, 
-                        repeat: Infinity, 
-                        repeatType: "reverse" 
-                      }}
-                    >
-                      <div className="px-2 py-1 rounded-md bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                    {/* Typing cursor with label */}
+                    <div className="flex items-center">
+                      {/* Vertical I-beam cursor */}
+                      <div className="h-5 w-0.5 bg-blue-500"></div>
+                      {/* Label at top right */}
+                      <div className="absolute -top-6 left-2 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
                         Alex
                       </div>
-                      <div className="w-2 h-2 bg-blue-500 rotate-45 mt-[1px]"></div>
-                    </motion.div>
-                    {/* Cursor I-beam */}
-                    <div className="h-5 w-0.5 bg-blue-500"></div>
-                    {/* Mouse cursor */}
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ 
-                        opacity: 1,
-                        rotate: [0, 5, 0, -5, 0] 
-                      }}
-                      transition={{ 
-                        opacity: { delay: 0.2 },
-                        rotate: { 
-                          duration: 5, 
-                          repeat: Infinity, 
-                          repeatType: "reverse" 
-                        }
-                      }}
-                      className="absolute -left-2 -top-2"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
-                        <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1" />
+                    </div>
+                  </motion.div>
+                  
+                  {/* Alex mouse cursor (floating separately) */}
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: 1,
+                      left: [50, 80, 100, 60, 50],
+                      top: [20, 30, 10, 5, 20]
+                    }}
+                    transition={{ 
+                      duration: 6,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }}
+                    className="absolute z-20"
+                  >
+                    <div className="relative">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
+                        <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1.5" />
                       </svg>
-                    </motion.div>
+                      {/* Name below mouse cursor */}
+                      <div className="absolute -bottom-6 left-0 px-2 py-0.5 rounded-full bg-blue-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                        Alex
+                      </div>
+                    </div>
                   </motion.div>
                 </div>
                 
@@ -1632,7 +1672,7 @@ export default function Home() {
                 <div className="relative ml-4">
                   <span className="text-blue-400">const</span> <span className="text-foreground">[</span><span className="text-green-400">collaborators</span>
                   
-                  {/* Second cursor effect */}
+                  {/* Sarah typing cursor (fixed with name at top right) */}
                   <motion.div 
                     initial={{ opacity: 0, left: 50 }}
                     animate={{ 
@@ -1649,44 +1689,42 @@ export default function Home() {
                     }}
                     className="absolute top-0 z-10"
                   >
-                    {/* Cursor flag with name */}
-                    <motion.div 
-                      className="absolute -top-8 -left-1 flex flex-col items-center"
-                      animate={{ y: [0, -2, 0] }}
-                      transition={{ 
-                        duration: 1.5, 
-                        repeat: Infinity, 
-                        repeatType: "reverse" 
-                      }}
-                    >
-                      <div className="px-2 py-1 rounded-md bg-pink-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                    {/* Typing cursor with label */}
+                    <div className="flex items-center">
+                      {/* Vertical I-beam cursor */}
+                      <div className="h-5 w-0.5 bg-pink-500"></div>
+                      {/* Label at top right */}
+                      <div className="absolute -top-6 left-2 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] whitespace-nowrap shadow-md">
                         Sarah
                       </div>
-                      <div className="w-2 h-2 bg-pink-500 rotate-45 mt-[1px]"></div>
-                    </motion.div>
-                    {/* Cursor I-beam */}
-                    <div className="h-5 w-0.5 bg-pink-500"></div>
-                    {/* Mouse cursor */}
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ 
-                        opacity: 1,
-                        rotate: [0, -5, 0, 5, 0] 
-                      }}
-                      transition={{ 
-                        opacity: { delay: 0.2 },
-                        rotate: { 
-                          duration: 4, 
-                          repeat: Infinity, 
-                          repeatType: "reverse" 
-                        }
-                      }}
-                      className="absolute -left-2 -top-2"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-500">
-                        <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1" />
+                    </div>
+                  </motion.div>
+                  
+                  {/* Sarah mouse cursor (floating separately) */}
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ 
+                      opacity: 1,
+                      left: [160, 190, 170, 140, 160],
+                      top: [30, 20, 40, 45, 30]
+                    }}
+                    transition={{ 
+                      duration: 7,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                      delay: 1
+                    }}
+                    className="absolute z-20"
+                  >
+                    <div className="relative">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-500">
+                        <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="1.5" />
                       </svg>
-                    </motion.div>
+                      {/* Name below mouse cursor */}
+                      <div className="absolute -bottom-6 left-0 px-2 py-0.5 rounded-full bg-pink-500 text-white text-[10px] whitespace-nowrap shadow-md">
+                        Sarah
+                      </div>
+                    </div>
                   </motion.div>
                   
                   <span className="text-foreground">, </span>
@@ -1697,7 +1735,7 @@ export default function Home() {
                 </div>
                 
                 <div className="ml-4 relative">
-                  {/* Animated typing effect */}
+                  {/* Animated typing effect with Maria's cursor */}
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
@@ -1711,19 +1749,13 @@ export default function Home() {
                   >
                     <span className="text-blue-400">const</span> <span className="text-green-400">syncChanges</span> <span className="text-foreground">= () => {'{'}</span>
                     <span className="text-purple-400"> socket</span><span className="text-foreground">.</span><span className="text-green-400">emit</span><span className="text-foreground">(</span><span className="text-yellow-400">'code:update'</span><span className="text-foreground">, code);</span> <span className="text-foreground">{'}'};</span>
+                    
+                    {/* Maria typing cursor at the end of the line */}
+                    <div className="inline-block relative ml-1 w-1">
+                    </div>
                   </motion.div>
                   <span className="invisible">const syncChanges = () => {" socket.emit('code:update', code); "};</span>
                 </div>
-                
-                <div className="ml-4">&nbsp;</div>
-                <div className="ml-4"><span className="text-purple-400">return</span> <span className="text-foreground">(</span></div>
-                <div className="ml-8"><span className="text-foreground">{'<'}</span><span className="text-green-400">CodeEditor</span></div>
-                <div className="ml-12"><span className="text-blue-400">value</span><span className="text-foreground">={'{'}code{'}'}</span></div>
-                <div className="ml-12"><span className="text-blue-400">onChange</span><span className="text-foreground">={'{'}setCode{'}'}</span></div>
-                <div className="ml-12"><span className="text-blue-400">collaborators</span><span className="text-foreground">={'{'}collaborators{'}'}</span></div>
-                <div className="ml-8"><span className="text-foreground">{'/>'}</span></div>
-                <div className="ml-4"><span className="text-foreground">);</span></div>
-                <div><span className="text-foreground">{'}'}</span></div>
               </div>
             </div>
           </div>
@@ -1798,7 +1830,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 4, duration: 0.5 }}
-            className="absolute left-36 bottom-16 bg-pink-500/20 backdrop-blur-md border border-pink-500/30 p-3 rounded-lg max-w-xs text-xs shadow-lg"
+            className="absolute right-4 bottom-16 bg-pink-500/20 backdrop-blur-md border border-pink-500/30 p-3 rounded-lg max-w-xs text-xs shadow-lg"
           >
             <div className="flex items-start gap-2">
               <div className="relative w-7 h-7 rounded-full bg-pink-500 flex items-center justify-center text-[10px] text-white font-bold shadow-md">
@@ -1848,41 +1880,6 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <motion.div 
-              className="absolute -bottom-2 left-3 w-4 h-4 bg-pink-500/20 border-b border-r border-pink-500/30 transform rotate-45"
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            ></motion.div>
-            
-            {/* Reply indicator */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 6, duration: 0.5 }}
-              className="absolute -bottom-8 left-10 flex items-center"
-            >
-              <div className="relative w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center text-[8px] text-white font-bold mr-2 shadow-sm">
-                <span>A</span>
-                <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-background rounded-full flex items-center justify-center">
-                  <svg width="6" height="6" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-blue-500">
-                    <path d="M4 2L20 18L13 18L11 22L8 12L4 2Z" fill="currentColor" stroke="white" strokeWidth="0.5" />
-                  </svg>
-                </div>
-              </div>
-              <motion.div
-                animate={{ 
-                  opacity: [0, 1, 1, 0],
-                }}
-                transition={{ 
-                  duration: 1.5,
-                  repeat: Infinity,
-                  repeatDelay: 1
-                }}
-                className="text-[10px] text-blue-300"
-              >
-                Alex is typing...
-              </motion.div>
-            </motion.div>
           </motion.div>
         </motion.div>
       </div>
