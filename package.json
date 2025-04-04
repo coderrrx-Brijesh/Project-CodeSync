@@ -96,6 +96,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/simple-peer": "^9.11.8",
     "@types/uuid": "^9.0.8",
+    "postcss-nested": "^7.0.2",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   }

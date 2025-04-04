@@ -257,7 +257,7 @@ export function FileExplorer({
   // Get folder icon based on folder state
   const getFolderIcon = (folderName: string, isExpanded: boolean) => {
     const iconName = isExpanded ? "folder-open" : "folder";
-    const iconUrl = getIconForFolder(folderName, iconName);
+    const iconUrl = getIconForFolder(folderName);
     return `https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons/icons/${iconUrl}`;
   };
 

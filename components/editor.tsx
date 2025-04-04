@@ -2,9 +2,11 @@
 
 import { useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import * as monaco from "monaco-editor";
 import { socketManager } from "@/lib/socket";
 import { Info, Code2, CheckCircle2 } from "lucide-react";
+
+// We'll initialize monaco inside useEffect only
+let monaco: any;
 
 const socket = socketManager.connect();
 
@@ -68,7 +70,7 @@ const configureMonaco = (monacoInstance: typeof monaco) => {
 
   // Apply language configurations
   Object.keys(languageConfigurations).forEach((lang) => {
-    if (monacoInstance.languages.getLanguages().some((l) => l.id === lang)) {
+    if (monacoInstance.languages.getLanguages().some((l: { id: string }) => l.id === lang)) {
       monacoInstance.languages.setLanguageConfiguration(
         lang,
         languageConfigurations[lang]
@@ -92,7 +94,7 @@ export function Editor({
   onCodeChange,
   fileId,
 }: EditorProps) {
-  const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const editorRef = useRef<typeof monaco.editor.IStandaloneCodeEditor | null>(null);
   const [isEditorReady, setIsEditorReady] = useState(false);
   const [languageInfo, setLanguageInfo] = useState("");
   const [lineCount, setLineCount] = useState(0);
@@ -116,13 +118,15 @@ export function Editor({
     };
   }, []);
 
-  // Configure Monaco when it's ready
+  // Initialize monaco and configure it when ready
   useEffect(() => {
-    if (monaco) {
+    // Dynamically import monaco editor on client-side only
+    import("monaco-editor/esm/vs/editor/editor.api").then((module) => {
+      monaco = module;
       const { languageDisplayNames } = configureMonaco(monaco);
       setLanguageMap(languageDisplayNames);
       loadAdditionalLanguages();
-    }
+    });
   }, []);
 
   // Configure editor theme
@@ -229,7 +233,7 @@ export function Editor({
       }
 
       // Add cursor position change listener
-      const disposable = editorRef.current.onDidChangeCursorPosition((e) => {
+      const disposable = editorRef.current.onDidChangeCursorPosition((e: typeof monaco.editor.ICursorPositionChangedEvent) => {
         setCursorPosition({
           line: e.position.lineNumber,
           column: e.position.column,
@@ -259,7 +263,7 @@ export function Editor({
   };
 
   const handleEditorDidMount = (
-    editor: monaco.editor.IStandaloneCodeEditor
+    editor: typeof monaco.editor.IStandaloneCodeEditor
   ) => {
     editorRef.current = editor;
     setIsEditorReady(true);
@@ -283,7 +287,7 @@ export function Editor({
           height="100%"
           width="100%"
           language={language}
-          theme={editorTheme}
+          theme="vs-dark"
           options={{
             automaticLayout: true,
             minimap: {

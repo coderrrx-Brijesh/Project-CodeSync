@@ -36,7 +36,7 @@ import {
 } from "./ui/tooltip";
 
 interface Message {
-  id: string;
+  id?: string; // Make ID optional since server doesn't send it
   userId: string;
   message: string;
   timestamp: string;
@@ -50,15 +50,44 @@ export function Chat() {
   const [copied, setCopied] = useState(false);
   const [showChatBot, setShowChatBot] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const processedMessageIds = useRef(new Set<string>());
+  const processedMessages = useRef(new Set<string>());
 
+  // Check for existing room in localStorage on component mount
+  useEffect(() => {
+    if (typeof window !== "undefined" && !roomId) {
+      const savedRoomId = localStorage.getItem("roomId");
+      if (savedRoomId) {
+        setRoomId(savedRoomId);
+      }
+    }
+  }, []);
+
+  // Handle socket connections and events
   useEffect(() => {
     const socket = socketManager.connect();
 
-    socket.on("new-message", ({ chat }) => {
-      if (!processedMessageIds.current.has(chat.id)) {
-        processedMessageIds.current.add(chat.id);
-        setMessages((prev) => [...prev, chat]);
+    // Use a robust approach to handle messages
+    socket.on("new-message", (data) => {
+      console.log("Raw message data:", data);
+
+      if (!data.chat) return;
+
+      // Create a unique message identifier based on content and timestamp
+      const messageId =
+        data.chat.userId + data.chat.timestamp + data.chat.message;
+
+      // Only process each message once
+      if (!processedMessages.current.has(messageId)) {
+        processedMessages.current.add(messageId);
+
+        // Create a chat object with the derived ID
+        const chat = {
+          ...data.chat,
+          id: messageId,
+        };
+
+        // Set the message using functional update to ensure latest state
+        setMessages((prevMessages) => [...prevMessages, chat]);
       }
     });
 
@@ -67,8 +96,9 @@ export function Chat() {
     });
 
     return () => {
-      socketManager.leaveRoom();
-      processedMessageIds.current.clear();
+      // Cleanup without affecting room connection
+      socket.off("new-message");
+      socket.off("user-connected");
     };
   }, []);
 
@@ -82,7 +112,11 @@ export function Chat() {
     e.preventDefault();
     if (!inputMessage.trim() || !roomId) return;
 
+    // Send the message through the socket manager
     socketManager.sendMessage(inputMessage);
+
+    // Don't add the message locally - we'll receive it back from the server
+    // This prevents message duplication
     setInputMessage("");
   };
 
@@ -107,6 +141,15 @@ export function Chat() {
       toast.success("Room ID copied to clipboard");
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  // Change the handleLeaveRoom function to also set a flag in sessionStorage
+  const handleLeaveRoom = () => {
+    // Store the fact that we explicitly left the room
+    socketManager.leaveRoom();
+    setRoomId(null);
+    setMessages([]);
+    toast.success("Left the room");
   };
 
   return (
@@ -196,6 +239,14 @@ export function Chat() {
                   )}
                 </Button>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-300"
+                onClick={handleLeaveRoom}
+              >
+                Leave
+              </Button>
             </div>
           )}
         </div>
@@ -226,7 +277,7 @@ export function Chat() {
 
                 return (
                   <div
-                    key={key}
+                    key={msg.id || `msg-${key}`}
                     className={cn(
                       "flex items-start gap-3",
                       !isFirstInGroup && "mt-1 pt-0"

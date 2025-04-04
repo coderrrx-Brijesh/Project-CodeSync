@@ -31,8 +31,27 @@ class SocketManager {
     | ((userId: string, stream: MediaStream) => void)
     | null = null;
 
-  private constructor() {
+  constructor() {
+    // Generate a unique ID for this client
     this.userId = uuidv4();
+
+    // Check if we're in browser environment before using localStorage
+    if (typeof window !== "undefined") {
+      // Use existing userId from localStorage or save the new one
+      const storedUserId = localStorage.getItem("userId");
+      if (storedUserId) {
+        this.userId = storedUserId;
+      } else {
+        localStorage.setItem("userId", this.userId);
+      }
+
+      // Try to restore room from localStorage if available
+      const savedRoom = localStorage.getItem("roomId");
+      if (savedRoom) {
+        this.roomId = savedRoom;
+        console.log("Restored room ID from localStorage:", savedRoom);
+      }
+    }
   }
 
   static getInstance(): SocketManager {
@@ -50,9 +69,35 @@ class SocketManager {
         reconnectionDelay: 1000,
         secure: true,
         rejectUnauthorized: process.env.NODE_ENV === "production",
+        query: { userId: this.userId },
+        autoConnect: true,
       });
+
       this.setupEventListeners();
       this.startHeartbeat();
+
+      // Check if there's a saved room ID in localStorage, and set it as the current roomId
+      if (typeof window !== "undefined") {
+        const savedRoomId = localStorage.getItem("roomId");
+        if (savedRoomId) {
+          // Always rejoin on reconnect to ensure we're in the room
+          this.socket?.emit("join-room", {
+            roomId: savedRoomId,
+            userId: this.userId,
+          });
+          this.socket?.emit("request-files", { roomId: savedRoomId });
+          this.roomId = savedRoomId;
+          console.log("Reconnected to room:", savedRoomId);
+        }
+      } else if (this.roomId) {
+        // If we have a roomId but it's not in localStorage (SSR), still reconnect
+        this.socket?.emit("join-room", {
+          roomId: this.roomId,
+          userId: this.userId,
+        });
+        this.socket?.emit("request-files", { roomId: this.roomId });
+        console.log("Reconnected to room using instance roomId:", this.roomId);
+      }
     }
     return this.socket;
   }
@@ -62,8 +107,26 @@ class SocketManager {
 
     this.socket.on("connect", () => {
       console.log("Connected to WebSocket server:", this.socket?.id);
-      if (this.roomId) {
-        this.joinRoom(this.roomId);
+
+      // Check if we have a room to rejoin
+      if (typeof window !== "undefined") {
+        const savedRoomId = localStorage.getItem("roomId");
+
+        if (savedRoomId) {
+          if (!this.roomId) {
+            // First time entering the room after refresh or new tab
+            this.roomId = savedRoomId;
+            this.socket?.emit("join-room", {
+              roomId: savedRoomId,
+              userId: this.userId,
+            });
+            this.socket?.emit("request-files", { roomId: savedRoomId });
+            console.log("Reconnected to room after refresh:", savedRoomId);
+          } else if (this.roomId === savedRoomId) {
+            // We're already tracking this room, just need to ensure connection
+            console.log("Socket reconnected to existing room:", savedRoomId);
+          }
+        }
       }
     });
 
@@ -272,33 +335,69 @@ class SocketManager {
     const roomId = uuidv4().substring(0, 8);
     if (!this.socket) this.connect();
     this.roomId = roomId;
+    // Store room ID in localStorage for persistence (browser-only)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("roomId", roomId);
+    }
     this.socket?.emit("create-room", { roomId, userId: this.userId });
     return roomId;
   }
 
   joinRoom(roomId: string): void {
     if (!this.socket) this.connect();
-    this.roomId = roomId;
-    this.socket?.emit("join-room", { roomId, userId: this.userId });
-    this.socket?.emit("request-files", { roomId });
+
+    // Only join if it's a different room
+    const joiningNewRoom = this.roomId !== roomId;
+
+    if (joiningNewRoom) {
+      // If we're in a different room already, leave it first
+      if (this.roomId) {
+        // Leave current room but don't clear localStorage
+        this.socket?.emit("leave-room", { roomId: this.roomId });
+        console.log("Left previous room:", this.roomId);
+      }
+
+      // Update roomId
+      this.roomId = roomId;
+
+      // Store room ID in localStorage for persistence (browser-only)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("roomId", roomId);
+      }
+
+      // Join new room
+      this.socket?.emit("join-room", { roomId, userId: this.userId });
+      this.socket?.emit("request-files", { roomId });
+      console.log("Joined new room:", roomId);
+    } else {
+      // If we're already in this room, don't emit join events again
+      // This prevents duplicate connections to the same room
+      console.log("Already in room:", roomId);
+    }
   }
 
   leaveRoom(): void {
     if (this.socket && this.roomId) {
       this.socket.emit("leave-room", { roomId: this.roomId });
       this.roomId = null;
+      // Remove room ID from localStorage when explicitly leaving (browser-only)
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("roomId");
+      }
     }
   }
 
   sendMessage(message: string): void {
     if (!this.socket || !this.roomId) return;
     const timestamp = new Date().toISOString();
+
     this.socket.emit("chat-message", {
       roomId: this.roomId,
       userId: this.userId,
       message,
       timestamp,
     });
+    console.log("Sent message:", message);
   }
 
   changeCode(code: string): void {

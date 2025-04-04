@@ -2,13 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -25,8 +23,6 @@ import {
   Code2,
   Layers,
   LayoutPanelLeft,
-  LayoutPanelRight,
-  MonitorSmartphone,
   Paintbrush,
 } from "lucide-react";
 import { Editor } from "@/components/editor";
@@ -53,22 +49,8 @@ export default function EditorPage() {
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);
   const [fileContent, setFileContent] = useState<string>("");
   const [isExecuting, setIsExecuting] = useState(false);
-  const [username, setUsername] = useState(
-    "User_" + Math.floor(Math.random() * 1000)
-  );
-  const [cursorColor, setCursorColor] = useState(() => {
-    const colors = [
-      "#FF5D8F",
-      "#4CB9E7",
-      "#FFB100",
-      "#7A86B6",
-      "#3CCF4E",
-      "#FF6969",
-      "#A460ED",
-      "#3A8891",
-    ];
-    return colors[Math.floor(Math.random() * colors.length)];
-  });
+  const [username, setUsername] = useState("User_0");
+  const [cursorColor, setCursorColor] = useState("#FFB100");
   const [isClicking, setIsClicking] = useState(false);
 
   // active-users in room
@@ -111,6 +93,25 @@ export default function EditorPage() {
     "#495057", // Dark Gray
     "#F8F9FA", // White
   ];
+
+  // Initialize random username and color on client-side only
+  useEffect(() => {
+    const randomUser = "User_" + Math.floor(Math.random() * 1000);
+    setUsername(randomUser);
+
+    const colors = [
+      "#FF5D8F",
+      "#4CB9E7",
+      "#FFB100",
+      "#7A86B6",
+      "#3CCF4E",
+      "#FF6969",
+      "#A460ED",
+      "#3A8891",
+    ];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    setCursorColor(randomColor);
+  }, []);
 
   // When a file is selected, load its content
   const handleFileSelect = (file: FileNode) => {
@@ -284,17 +285,13 @@ export default function EditorPage() {
             </div>
 
             {/* Language selector */}
-            <Select
-              value={selectedLanguage}
-              onValueChange={setSelectedLanguage}
-            >
-              <SelectTrigger className="w-[130px] h-8 text-xs md:block hidden">
-                <SelectValue placeholder="Language" />
+            <Select value={selectedLanguage} onValueChange={setSelectedLanguage} defaultValue="python">
+
+              <SelectTrigger className="h-8 text-xs w-[80px] md:w-[130px]"aria-label="Select Language">
+                <SelectValue placeholder="Select Language" />
               </SelectTrigger>
-              <SelectTrigger className="w-[80px] h-8 text-xs md:hidden">
-                <SelectValue placeholder="Lang" />
-              </SelectTrigger>
-              <SelectContent>
+
+              <SelectContent align="center" side="bottom" sideOffset={8}>
                 <SelectItem value="javascript">JavaScript</SelectItem>
                 <SelectItem value="typescript">TypeScript</SelectItem>
                 <SelectItem value="python">Python</SelectItem>
@@ -317,6 +314,7 @@ export default function EditorPage() {
                 <SelectItem value="shell">Shell</SelectItem>
                 <SelectItem value="plaintext">Plain Text</SelectItem>
               </SelectContent>
+              
             </Select>
 
             {/* Run code button */}
