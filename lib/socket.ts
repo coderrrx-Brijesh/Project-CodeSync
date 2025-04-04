@@ -39,7 +39,7 @@ class SocketManager {
   connect(): Socket {
     if (!this.socket) {
       this.socket = io(
-        process.env.NEXT_PUBLIC_SOCKET_URL ,
+        "https://codesync-websocket-server.onrender.com",
         {
           transports: ["websocket", "polling"],
           reconnectionAttempts: Infinity,
@@ -72,7 +72,7 @@ class SocketManager {
         }
         this.socket.disconnect();
         this.socket = io(
-          process.env.NEXT_PUBLIC_SOCKET_URL ,
+          "https://codesync-websocket-server.onrender.com",
           {
             transports: ["websocket","polling"],
             reconnectionAttempts: Infinity,

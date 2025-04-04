@@ -28,7 +28,10 @@ import {
   Edit,
   Trash2,
   MoveRight,
+  Search,
+  RefreshCw,
 } from "lucide-react";
+import { getIconForFile, getIconForFolder } from "vscode-icons-js";
 import { cn } from "@/lib/utils";
 import { FileDialog } from "./file-dialog";
 import { toast } from "sonner";
@@ -52,6 +55,8 @@ export function FileExplorer({
   const [selectedNode, setSelectedNode] = useState<FileNode | null>(null);
   const [draggedNode, setDraggedNode] = useState<FileNode | null>(null);
   const [dragOverNodeId, setDragOverNodeId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
   const initialized = useRef(false);
 
   const refreshFiles = useCallback(() => {
@@ -228,6 +233,45 @@ export function FileExplorer({
     }
   };
 
+  // Get file icon based on file extension
+  const getFileIcon = (fileName: string) => {
+    const iconUrl = getIconForFile(fileName);
+    return `https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons/icons/${iconUrl}`;
+  };
+
+  // Get folder icon based on folder state
+  const getFolderIcon = (folderName: string, isExpanded: boolean) => {
+    const iconName = isExpanded ? "folder-open" : "folder";
+    const iconUrl = getIconForFolder(folderName, iconName);
+    return `https://cdn.jsdelivr.net/gh/vscode-icons/vscode-icons/icons/${iconUrl}`;
+  };
+
+  // Filter files based on search query
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return files;
+    }
+
+    const filterNodes = (nodes: FileNode[]): FileNode[] => {
+      return nodes.reduce((acc, node) => {
+        if (node.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+          acc.push(node);
+        } else if (node.children && node.children.length) {
+          const filteredChildren = filterNodes(node.children);
+          if (filteredChildren.length) {
+            acc.push({
+              ...node,
+              children: filteredChildren,
+            });
+          }
+        }
+        return acc;
+      }, [] as FileNode[]);
+    };
+
+    return filterNodes(files);
+  }, [files, searchQuery]);
+
   const renderNode = (node: FileNode, level: number = 0) => {
     const isExpanded = expandedFolders.has(node.id);
     const isSelected = selectedFileId === node.id;
@@ -239,10 +283,10 @@ export function FileExplorer({
           <ContextMenuTrigger>
             <div
               className={cn(
-                "flex items-center py-1 px-2 hover:bg-accent rounded-sm cursor-pointer",
-                isSelected && "bg-accent",
+                "flex items-center py-1.5 px-2 hover:bg-accent rounded-md cursor-pointer transition-colors duration-150",
+                isSelected && "bg-accent/80 text-accent-foreground",
                 isDraggedOver &&
-                  "bg-accent/50 border border-dashed border-primary",
+                  "bg-accent/40 border border-dashed border-primary",
                 level > 0 && "ml-4"
               )}
               onClick={() => node.type === "file" && onFileSelect(node)}
@@ -259,16 +303,24 @@ export function FileExplorer({
                     className="mr-1 hover:bg-accent rounded-sm"
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4" />
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
                     ) : (
-                      <ChevronRight className="h-4 w-4" />
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
                   </button>
                 )}
                 {node.type === "folder" ? (
-                  <Folder className="h-4 w-4 mr-2 text-blue-500" />
+                  <img
+                    src={getFolderIcon(node.name, isExpanded)}
+                    alt="folder"
+                    className="h-4 w-4 mr-2"
+                  />
                 ) : (
-                  <File className="h-4 w-4 mr-2 text-gray-500" />
+                  <img
+                    src={getFileIcon(node.name)}
+                    alt="file"
+                    className="h-4 w-4 mr-2"
+                  />
                 )}
                 <span className="text-sm truncate">{node.name}</span>
               </div>
@@ -316,25 +368,70 @@ export function FileExplorer({
   };
 
   const renderedFiles = useMemo(() => {
-    return files.map((node) => renderNode(node));
-  }, [files, expandedFolders, selectedFileId, dragOverNodeId]);
+    return filteredFiles.map((node) => renderNode(node));
+  }, [filteredFiles, expandedFolders, selectedFileId, dragOverNodeId]);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-2 border-b">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => {
-            setSelectedNode(null);
-            setDialogType("create");
-            setDialogOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New File/Folder
-        </Button>
+    <div className="h-full flex flex-col bg-background/70 backdrop-blur-sm">
+      <div className="p-2 border-b flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium">Files</h3>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-6 w-6"
+            onClick={refreshFiles}
+            title="Refresh"
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+        {isSearching ? (
+          <div className="flex items-center gap-1">
+            <Input
+              className="h-8 text-xs"
+              placeholder="Search files..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                setIsSearching(false);
+                setSearchQuery("");
+              }}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 flex items-center justify-between"
+              onClick={() => {
+                setSelectedNode(null);
+                setDialogType("create");
+                setDialogOpen(true);
+              }}
+            >
+              <span className="text-xs">New File/Folder</span>
+              <Plus className="h-3.5 w-3.5 ml-1" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setIsSearching(true)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
       <ScrollArea className="flex-1">
         <div className="p-2">{renderedFiles}</div>
