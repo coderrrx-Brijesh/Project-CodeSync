@@ -55,8 +55,7 @@ export default function Home() {
           <ProfileLogo />
         ) : (
           <div className="flex flex-row gap-3">
-            <Button className="relative group overflow-hidden bg-background/30 backdrop-blur-lg border border-white/10 hover:bg-white/20 transition-all duration-300">
-              <span className="absolute inset-0 bg-gradient-to-r from-primary/10 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <Button className="relative overflow-hidden backdrop-blur-sm border-white/20 hover:border-white/40 transition-all duration-300">
               <Link href="/signin">Sign In</Link>
             </Button>
             <Button
