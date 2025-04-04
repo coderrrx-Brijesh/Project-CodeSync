@@ -21,9 +21,15 @@ class SocketManager {
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private peerConnections: Map<string, RTCPeerConnectionWithUserId> = new Map();
   private localStream: MediaStream | null = null;
-  private onUserJoinedVideoCallback: ((userId: string, socketId: string) => void) | null = null;
-  private onUserLeftVideoCallback: ((userId: string, socketId: string) => void) | null = null;
-  private onRemoteStreamCallback: ((userId: string, stream: MediaStream) => void) | null = null;
+  private onUserJoinedVideoCallback:
+    | ((userId: string, socketId: string) => void)
+    | null = null;
+  private onUserLeftVideoCallback:
+    | ((userId: string, socketId: string) => void)
+    | null = null;
+  private onRemoteStreamCallback:
+    | ((userId: string, stream: MediaStream) => void)
+    | null = null;
 
   private constructor() {
     this.userId = uuidv4();
@@ -38,16 +44,13 @@ class SocketManager {
 
   connect(): Socket {
     if (!this.socket) {
-      this.socket = io(
-        "https://codesync-websocket-server.onrender.com",
-        {
-          transports: ["websocket", "polling"],
-          reconnectionAttempts: Infinity,
-          reconnectionDelay: 1000,
-          secure: true,
-          rejectUnauthorized: process.env.NODE_ENV === 'production'
-        }
-      );
+      this.socket = io("https://codesync-websocket-server.onrender.com", {
+        transports: ["websocket", "polling"],
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        secure: true,
+        rejectUnauthorized: process.env.NODE_ENV === "production",
+      });
       this.setupEventListeners();
       this.startHeartbeat();
     }
@@ -71,16 +74,13 @@ class SocketManager {
           this.socket.io.engine.transport.close();
         }
         this.socket.disconnect();
-        this.socket = io(
-          "https://codesync-websocket-server.onrender.com",
-          {
-            transports: ["websocket","polling"],
-            reconnectionAttempts: Infinity,
-            reconnectionDelay: 1000,
-            secure: true,
-            rejectUnauthorized: process.env.NODE_ENV === 'production'
-          }
-        );
+        this.socket = io("https://codesync-websocket-server.onrender.com", {
+          transports: ["websocket", "polling"],
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          secure: true,
+          rejectUnauthorized: process.env.NODE_ENV === "production",
+        });
         this.setupEventListeners();
       }
     });
@@ -224,10 +224,12 @@ class SocketManager {
       const peerConnection = this.peerConnections.get(caller);
       if (peerConnection) {
         try {
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(sdp)
+          );
           const answer = await peerConnection.createAnswer();
           await peerConnection.setLocalDescription(answer);
-          
+
           this.socket?.emit("answer", {
             target: caller,
             caller: this.socket.id,
@@ -244,7 +246,9 @@ class SocketManager {
       const peerConnection = this.peerConnections.get(caller);
       if (peerConnection) {
         try {
-          await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp));
+          await peerConnection.setRemoteDescription(
+            new RTCSessionDescription(sdp)
+          );
         } catch (error) {
           console.error("Error handling answer:", error);
         }
@@ -316,7 +320,11 @@ class SocketManager {
 
   folderCreated(folder: any, parentId: string | null): void {
     if (!this.socket || !this.roomId) return;
-    this.socket.emit("folder-created", { roomId: this.roomId, folder, parentId });
+    this.socket.emit("folder-created", {
+      roomId: this.roomId,
+      folder,
+      parentId,
+    });
   }
 
   fileUpdated(fileId: string, content: string): void {
@@ -336,7 +344,11 @@ class SocketManager {
 
   fileMoved(nodeId: string, newParentId: string | null): void {
     if (!this.socket || !this.roomId) return;
-    this.socket.emit("file-moved", { roomId: this.roomId, nodeId, newParentId });
+    this.socket.emit("file-moved", {
+      roomId: this.roomId,
+      nodeId,
+      newParentId,
+    });
   }
 
   cursorMoved(
@@ -361,12 +373,19 @@ class SocketManager {
   // ----- Video Call Methods -----
   async joinVideoCall(): Promise<MediaStream | null> {
     if (!this.socket || !this.roomId) return null;
-    
+
     try {
       // Check if we're in a browser environment with media device support
-      if (typeof window === 'undefined' || !navigator || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (
+        typeof window === "undefined" ||
+        !navigator ||
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
+      ) {
         console.error("MediaDevices API not supported in this environment");
-        throw new Error("Your browser doesn't support video calls. Please try using Chrome, Firefox, or Edge.");
+        throw new Error(
+          "Your browser doesn't support video calls. Please try using Chrome, Firefox, or Edge."
+        );
       }
 
       // Request user media
@@ -374,32 +393,44 @@ class SocketManager {
         video: true,
         audio: true,
       });
-      
+
       // Emit event to join the video call
       this.socket.emit("join-video-call", {
         roomId: this.roomId,
         userId: this.userId,
       });
-      
+
       return this.localStream;
     } catch (error) {
       // Provide more user-friendly error messages
       let errorMessage = "Error joining video call";
-      
+
       if (error instanceof Error) {
-        if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-          errorMessage = "Camera or microphone access denied. Please allow access to use video calls.";
-        } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-          errorMessage = "No camera or microphone found. Please connect a device and try again.";
-        } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-          errorMessage = "Could not access your camera or microphone. They might be in use by another application.";
-        } else if (error.name === 'OverconstrainedError') {
+        if (
+          error.name === "NotAllowedError" ||
+          error.name === "PermissionDeniedError"
+        ) {
+          errorMessage =
+            "Camera or microphone access denied. Please allow access to use video calls.";
+        } else if (
+          error.name === "NotFoundError" ||
+          error.name === "DevicesNotFoundError"
+        ) {
+          errorMessage =
+            "No camera or microphone found. Please connect a device and try again.";
+        } else if (
+          error.name === "NotReadableError" ||
+          error.name === "TrackStartError"
+        ) {
+          errorMessage =
+            "Could not access your camera or microphone. They might be in use by another application.";
+        } else if (error.name === "OverconstrainedError") {
           errorMessage = "Your camera doesn't meet the required constraints.";
         } else if (error.message) {
           errorMessage = error.message;
         }
       }
-      
+
       console.error(errorMessage, error);
       return null;
     }
@@ -407,18 +438,18 @@ class SocketManager {
 
   leaveVideoCall(): void {
     if (!this.socket || !this.roomId) return;
-    
+
     // Stop all tracks in local stream
     if (this.localStream) {
-      this.localStream.getTracks().forEach(track => track.stop());
+      this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;
     }
-    
+
     // Close all peer connections
     this.peerConnections.forEach((pc, socketId) => {
       this.closePeerConnection(socketId);
     });
-    
+
     // Emit event to leave the video call
     this.socket.emit("leave-video-call", {
       roomId: this.roomId,
@@ -426,7 +457,11 @@ class SocketManager {
     });
   }
 
-  private createPeerConnection(userId: string, socketId: string, isInitiator: boolean): RTCPeerConnectionWithUserId | null {
+  private createPeerConnection(
+    userId: string,
+    socketId: string,
+    isInitiator: boolean
+  ): RTCPeerConnectionWithUserId | null {
     if (!this.socket || !this.localStream) return null;
 
     // Check if we already have a connection with this peer
@@ -444,14 +479,16 @@ class SocketManager {
     };
 
     // Create a new RTCPeerConnection
-    const peerConnection: RTCPeerConnectionWithUserId = new RTCPeerConnection(iceServers);
+    const peerConnection: RTCPeerConnectionWithUserId = new RTCPeerConnection(
+      iceServers
+    );
     peerConnection.userId = userId;
-    
+
     // Add the local stream to the peer connection
-    this.localStream.getTracks().forEach(track => {
+    this.localStream.getTracks().forEach((track) => {
       peerConnection.addTrack(track, this.localStream!);
     });
-    
+
     // Set up ICE candidate handling
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
@@ -462,7 +499,7 @@ class SocketManager {
         });
       }
     };
-    
+
     // Handle when a new remote stream is received
     peerConnection.ontrack = (event) => {
       if (event.streams && event.streams[0]) {
@@ -472,23 +509,26 @@ class SocketManager {
         }
       }
     };
-    
+
     // Store the peer connection
     this.peerConnections.set(socketId, peerConnection);
-    
+
     // If initiator, create and send an offer
     if (isInitiator) {
       this.createAndSendOffer(socketId, peerConnection);
     }
-    
+
     return peerConnection;
   }
 
-  private async createAndSendOffer(socketId: string, peerConnection: RTCPeerConnection): Promise<void> {
+  private async createAndSendOffer(
+    socketId: string,
+    peerConnection: RTCPeerConnection
+  ): Promise<void> {
     try {
       const offer = await peerConnection.createOffer();
       await peerConnection.setLocalDescription(offer);
-      
+
       this.socket?.emit("offer", {
         target: socketId,
         caller: this.socket.id,
@@ -508,15 +548,21 @@ class SocketManager {
   }
 
   // Callbacks for video call events
-  setOnUserJoinedVideoCallback(callback: (userId: string, socketId: string) => void): void {
+  setOnUserJoinedVideoCallback(
+    callback: (userId: string, socketId: string) => void
+  ): void {
     this.onUserJoinedVideoCallback = callback;
   }
 
-  setOnUserLeftVideoCallback(callback: (userId: string, socketId: string) => void): void {
+  setOnUserLeftVideoCallback(
+    callback: (userId: string, socketId: string) => void
+  ): void {
     this.onUserLeftVideoCallback = callback;
   }
 
-  setOnRemoteStreamCallback(callback: (userId: string, stream: MediaStream) => void): void {
+  setOnRemoteStreamCallback(
+    callback: (userId: string, stream: MediaStream) => void
+  ): void {
     this.onRemoteStreamCallback = callback;
   }
 

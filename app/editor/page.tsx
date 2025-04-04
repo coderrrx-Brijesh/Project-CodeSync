@@ -27,6 +27,7 @@ import {
   LayoutPanelLeft,
   LayoutPanelRight,
   MonitorSmartphone,
+  Paintbrush,
 } from "lucide-react";
 import { Editor } from "@/components/editor";
 import { Chat } from "@/components/chat";
@@ -95,6 +96,22 @@ export default function EditorPage() {
   // Move this useRef to the component level, outside of any useEffect
   const lastMousePosition = useRef({ x: 0, y: 0 });
 
+  // Available cursor colors
+  const cursorColors = [
+    "#FF5D8F", // Pink
+    "#4CB9E7", // Blue
+    "#FFB100", // Orange
+    "#7A86B6", // Lavender
+    "#3CCF4E", // Green
+    "#FF6969", // Red
+    "#A460ED", // Purple
+    "#3A8891", // Teal
+    "#FF8C32", // Coral
+    "#6C757D", // Gray
+    "#495057", // Dark Gray
+    "#F8F9FA", // White
+  ];
+
   // When a file is selected, load its content
   const handleFileSelect = (file: FileNode) => {
     if (file.type === "file") {
@@ -107,14 +124,34 @@ export default function EditorPage() {
       const extension = file.name.split(".").pop() || "";
       const languageMap: { [key: string]: string } = {
         js: "javascript",
+        jsx: "javascript",
         ts: "typescript",
+        tsx: "typescript",
         py: "python",
         java: "java",
         cpp: "cpp",
+        c: "cpp",
+        cs: "csharp",
+        php: "php",
+        rb: "ruby",
+        rs: "rust",
+        go: "go",
+        swift: "swift",
+        kt: "kotlin",
+        scala: "scala",
         md: "markdown",
         html: "html",
+        htm: "html",
         css: "css",
+        scss: "scss",
+        less: "less",
         json: "json",
+        xml: "xml",
+        yaml: "yaml",
+        yml: "yaml",
+        sql: "sql",
+        sh: "shell",
+        bash: "shell",
       };
       setSelectedLanguage(languageMap[extension] || "plaintext");
 
@@ -251,8 +288,11 @@ export default function EditorPage() {
               value={selectedLanguage}
               onValueChange={setSelectedLanguage}
             >
-              <SelectTrigger className="w-[130px] h-8 text-xs">
+              <SelectTrigger className="w-[130px] h-8 text-xs md:block hidden">
                 <SelectValue placeholder="Language" />
+              </SelectTrigger>
+              <SelectTrigger className="w-[80px] h-8 text-xs md:hidden">
+                <SelectValue placeholder="Lang" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="javascript">JavaScript</SelectItem>
@@ -260,9 +300,21 @@ export default function EditorPage() {
                 <SelectItem value="python">Python</SelectItem>
                 <SelectItem value="java">Java</SelectItem>
                 <SelectItem value="cpp">C++</SelectItem>
+                <SelectItem value="csharp">C#</SelectItem>
+                <SelectItem value="php">PHP</SelectItem>
+                <SelectItem value="ruby">Ruby</SelectItem>
+                <SelectItem value="rust">Rust</SelectItem>
+                <SelectItem value="go">Go</SelectItem>
+                <SelectItem value="swift">Swift</SelectItem>
+                <SelectItem value="kotlin">Kotlin</SelectItem>
                 <SelectItem value="html">HTML</SelectItem>
                 <SelectItem value="css">CSS</SelectItem>
+                <SelectItem value="scss">SCSS</SelectItem>
+                <SelectItem value="json">JSON</SelectItem>
                 <SelectItem value="markdown">Markdown</SelectItem>
+                <SelectItem value="yaml">YAML</SelectItem>
+                <SelectItem value="sql">SQL</SelectItem>
+                <SelectItem value="shell">Shell</SelectItem>
                 <SelectItem value="plaintext">Plain Text</SelectItem>
               </SelectContent>
             </Select>
@@ -273,29 +325,81 @@ export default function EditorPage() {
               variant="outline"
               onClick={handleRunCode}
               disabled={isExecuting || !activeFile}
-              className="ml-2 h-8"
+              className="ml-2 h-8 md:flex hidden items-center"
             >
               <Play className="h-3.5 w-3.5 mr-2" />
               Run
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleRunCode}
+              disabled={isExecuting || !activeFile}
+              className="ml-2 h-8 md:hidden flex items-center"
+              title="Run Code"
+            >
+              <Play className="h-3.5 w-3.5" />
             </Button>
           </div>
 
           {/* Right side controls */}
           <div className="flex items-center gap-2">
             {/* Active users */}
-            <div className="flex items-center px-2 py-1 text-xs bg-primary/10 rounded-md mr-2">
+            <div className="md:flex hidden items-center px-2 py-1 text-xs bg-primary/10 rounded-md mr-2">
               <Users className="h-3.5 w-3.5 mr-1.5 text-primary" />
               <span>{activeUsers} online</span>
             </div>
+            <div className="md:hidden flex items-center px-2 py-1 text-xs bg-primary/10 rounded-md mr-2">
+              <Users className="h-3.5 w-3.5 text-primary" />
+            </div>
 
-            {/* Layout controls for mobile/responsive */}
+            {/* Cursor color picker */}
             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 md:flex hidden items-center gap-1.5 px-2"
+                  style={{ color: cursorColor }}
+                  title="Change cursor color"
+                >
+                  <Paintbrush className="h-4 w-4" />
+                  <span className="text-xs font-medium">Cursor</span>
+                </Button>
+              </DropdownMenuTrigger>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 md:hidden"
+                  style={{ color: cursorColor }}
+                  title="Change cursor color"
                 >
+                  <Paintbrush className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <div className="p-2 text-xs text-muted-foreground mb-1">
+                  Select your cursor color
+                </div>
+                <div className="grid grid-cols-4 gap-1 p-1 w-32">
+                  {cursorColors.map((color) => (
+                    <button
+                      key={color}
+                      className="w-6 h-6 rounded-full border border-border hover:scale-110 transition-transform"
+                      style={{ backgroundColor: color }}
+                      onClick={() => setCursorColor(color)}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* Layout controls for mobile/responsive */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
                   <Layers className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -319,7 +423,7 @@ export default function EditorPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Desktop panels toggle buttons */}
+            {/* Desktop panels toggle buttons - hidden on mobile */}
             <div className="hidden md:flex items-center space-x-1">
               <Button
                 variant={showFileExplorer ? "default" : "outline"}
@@ -367,7 +471,11 @@ export default function EditorPage() {
           <ResizablePanelGroup direction="horizontal">
             {showFileExplorer && (
               <>
-                <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+                <ResizablePanel
+                  defaultSize={isMobileScreen ? 50 : 20}
+                  minSize={isMobileScreen ? 40 : 15}
+                  maxSize={isMobileScreen ? 60 : 30}
+                >
                   <FileExplorer
                     onFileSelect={handleFileSelect}
                     selectedFileId={activeFile?.id}
@@ -410,7 +518,11 @@ export default function EditorPage() {
             {showChat && (
               <>
                 <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={30} minSize={20} maxSize={50}>
+                <ResizablePanel
+                  defaultSize={isMobileScreen ? 80 : 30}
+                  minSize={isMobileScreen ? 70 : 20}
+                  maxSize={isMobileScreen ? 90 : 50}
+                >
                   <Chat />
                 </ResizablePanel>
               </>
@@ -420,7 +532,11 @@ export default function EditorPage() {
         {showTerminal && (
           <>
             <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={30} minSize={15} maxSize={50}>
+            <ResizablePanel
+              defaultSize={30}
+              minSize={15}
+              maxSize={isMobileScreen ? 70 : 50}
+            >
               <TerminalComponent />
             </ResizablePanel>
           </>

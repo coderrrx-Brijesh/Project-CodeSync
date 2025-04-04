@@ -23,9 +23,17 @@ import {
   Copy,
   ClipboardCheck,
   MessageSquare,
+  Bot,
 } from "lucide-react";
 import VideoCallToggle from "./video-call-toggle";
+import ChatBotToggle from "./chat-bot-toggle";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 interface Message {
   id: string;
@@ -40,13 +48,18 @@ export function Chat() {
   const [roomId, setRoomId] = useState<string | null>(null);
   const [joinRoomId, setJoinRoomId] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showChatBot, setShowChatBot] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const processedMessageIds = useRef(new Set<string>());
 
   useEffect(() => {
     const socket = socketManager.connect();
 
     socket.on("new-message", ({ chat }) => {
-      setMessages((prev) => [...prev, chat]);
+      if (!processedMessageIds.current.has(chat.id)) {
+        processedMessageIds.current.add(chat.id);
+        setMessages((prev) => [...prev, chat]);
+      }
     });
 
     socket.on("user-connected", (userId: string) => {
@@ -55,6 +68,7 @@ export function Chat() {
 
     return () => {
       socketManager.leaveRoom();
+      processedMessageIds.current.clear();
     };
   }, []);
 
@@ -103,6 +117,26 @@ export function Chat() {
           <h2 className="font-medium text-sm">Team Chat</h2>
         </div>
         <div className="flex items-center space-x-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setShowChatBot(!showChatBot)}
+                >
+                  <Bot
+                    className={cn("h-4 w-4", showChatBot && "text-primary")}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{showChatBot ? "Hide" : "Show"} AI Assistant</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {!roomId ? (
             <>
               <Dialog>
@@ -167,88 +201,96 @@ export function Chat() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1 px-3 py-2">
-        <div className="space-y-4">
-          {messages.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-32 text-center">
-              <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-2" />
-              <p className="text-sm text-muted-foreground">
-                {roomId
-                  ? "No messages yet. Start the conversation!"
-                  : "Join or create a room to start chatting"}
-              </p>
-            </div>
-          )}
-
-          {messages.map((msg, key) => {
-            const isFirstInGroup =
-              key === 0 || messages[key - 1].userId !== msg.userId;
-
-            return (
-              <div
-                key={key}
-                className={cn(
-                  "flex items-start gap-3",
-                  !isFirstInGroup && "mt-1 pt-0"
-                )}
-              >
-                {isFirstInGroup ? (
-                  <Avatar className="h-7 w-7 border border-border">
-                    <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                      {msg.userId.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="w-7"></div>
-                )}
-                <div className="flex-1 min-w-0">
-                  {isFirstInGroup && (
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-medium text-sm">
-                        User {msg.userId.slice(0, 4)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  <div className="rounded-md bg-muted py-2 px-3 text-sm break-words">
-                    {msg.message}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-          <div ref={scrollRef} />
+      {showChatBot ? (
+        <div className="flex-1">
+          <ChatBotToggle />
         </div>
-      </ScrollArea>
+      ) : (
+        <>
+          <ScrollArea className="flex-1 px-3 py-2">
+            <div className="space-y-4">
+              {messages.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-32 text-center">
+                  <MessageSquare className="h-10 w-10 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {roomId
+                      ? "No messages yet. Start the conversation!"
+                      : "Join or create a room to start chatting"}
+                  </p>
+                </div>
+              )}
+
+              {messages.map((msg, key) => {
+                const isFirstInGroup =
+                  key === 0 || messages[key - 1].userId !== msg.userId;
+
+                return (
+                  <div
+                    key={key}
+                    className={cn(
+                      "flex items-start gap-3",
+                      !isFirstInGroup && "mt-1 pt-0"
+                    )}
+                  >
+                    {isFirstInGroup ? (
+                      <Avatar className="h-7 w-7 border border-border">
+                        <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                          {msg.userId.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="w-7"></div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      {isFirstInGroup && (
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="font-medium text-sm">
+                            User {msg.userId.slice(0, 4)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(msg.timestamp).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                      )}
+                      <div className="rounded-md bg-muted py-2 px-3 text-sm break-words">
+                        {msg.message}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={scrollRef} />
+            </div>
+          </ScrollArea>
+
+          <div className="border-t p-3">
+            <form onSubmit={handleSendMessage} className="flex space-x-2">
+              <Input
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                placeholder={
+                  roomId ? "Type your message..." : "Join a room to chat"
+                }
+                disabled={!roomId}
+                className="h-9 text-sm"
+              />
+              <Button
+                type="submit"
+                disabled={!roomId}
+                size="icon"
+                className="h-9 w-9"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
+        </>
+      )}
 
       <VideoCallToggle />
-
-      <div className="border-t p-3">
-        <form onSubmit={handleSendMessage} className="flex space-x-2">
-          <Input
-            value={inputMessage}
-            onChange={(e) => setInputMessage(e.target.value)}
-            placeholder={
-              roomId ? "Type your message..." : "Join a room to chat"
-            }
-            disabled={!roomId}
-            className="h-9 text-sm"
-          />
-          <Button
-            type="submit"
-            disabled={!roomId}
-            size="icon"
-            className="h-9 w-9"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
-      </div>
     </div>
   );
 }

@@ -13,11 +13,77 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
 
+// Load additional languages (these will be loaded dynamically)
+const loadAdditionalLanguages = () => {
+  // This is just a check function - Monaco will load languages as needed
+  return true;
+};
+
+// This function configures Monaco with proper settings
+const configureMonaco = (monacoInstance: typeof monaco) => {
+  // Define custom language display names for better UI
+  const languageDisplayNames: { [key: string]: string } = {
+    javascript: "JavaScript",
+    typescript: "TypeScript",
+    html: "HTML",
+    css: "CSS",
+    scss: "SCSS",
+    less: "Less",
+    json: "JSON",
+    markdown: "Markdown",
+    python: "Python",
+    java: "Java",
+    cpp: "C++",
+    csharp: "C#",
+    php: "PHP",
+    ruby: "Ruby",
+    rust: "Rust",
+    go: "Go",
+    swift: "Swift",
+    kotlin: "Kotlin",
+    scala: "Scala",
+    shell: "Shell/Bash",
+    sql: "SQL",
+    yaml: "YAML",
+    xml: "XML",
+    plaintext: "Plain Text",
+  };
+
+  // Set custom options for each language if needed
+  // This is just an example, you can expand as needed
+  const languageConfigurations: { [key: string]: any } = {
+    javascript: {
+      wordBasedSuggestions: true,
+      suggestOnTriggerCharacters: true,
+    },
+    typescript: {
+      wordBasedSuggestions: true,
+      suggestOnTriggerCharacters: true,
+    },
+    python: {
+      wordBasedSuggestions: true,
+      suggestOnTriggerCharacters: true,
+    },
+  };
+
+  // Apply language configurations
+  Object.keys(languageConfigurations).forEach((lang) => {
+    if (monacoInstance.languages.getLanguages().some((l) => l.id === lang)) {
+      monacoInstance.languages.setLanguageConfiguration(
+        lang,
+        languageConfigurations[lang]
+      );
+    }
+  });
+
+  return { languageDisplayNames };
+};
+
 interface EditorProps {
   language: string;
   initialContent: string;
   onCodeChange?: (value: string) => void;
-  fileId?: string; // Use fileId instead of key to track which file is being edited
+  fileId?: string;
 }
 
 export function Editor({
@@ -32,7 +98,32 @@ export function Editor({
   const [lineCount, setLineCount] = useState(0);
   const [cursorPosition, setCursorPosition] = useState({ line: 1, column: 1 });
   const [editorTheme, setEditorTheme] = useState("vs-dark");
+  const [languageMap, setLanguageMap] = useState<{ [key: string]: string }>({});
   const lastReceivedContent = useRef<string>(initialContent);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
+
+  // Configure Monaco when it's ready
+  useEffect(() => {
+    if (monaco) {
+      const { languageDisplayNames } = configureMonaco(monaco);
+      setLanguageMap(languageDisplayNames);
+      loadAdditionalLanguages();
+    }
+  }, []);
 
   // Configure editor theme
   useEffect(() => {
@@ -134,25 +225,6 @@ export function Editor({
         setLineCount(model.getLineCount());
 
         // Set language display name
-        const languageMap: { [key: string]: string } = {
-          javascript: "JavaScript",
-          typescript: "TypeScript",
-          html: "HTML",
-          css: "CSS",
-          json: "JSON",
-          markdown: "Markdown",
-          python: "Python",
-          java: "Java",
-          cpp: "C++",
-          csharp: "C#",
-          go: "Go",
-          rust: "Rust",
-          php: "PHP",
-          ruby: "Ruby",
-          swift: "Swift",
-          kotlin: "Kotlin",
-          plaintext: "Plain Text",
-        };
         setLanguageInfo(languageMap[language] || language);
       }
 
@@ -168,7 +240,7 @@ export function Editor({
         disposable.dispose();
       };
     }
-  }, [isEditorReady, language]);
+  }, [isEditorReady, language, languageMap]);
 
   const handleEditorChange = (value?: string) => {
     if (value !== undefined) {
@@ -215,7 +287,7 @@ export function Editor({
           options={{
             automaticLayout: true,
             minimap: {
-              enabled: true,
+              enabled: !isMobile, // Disable minimap on mobile
               size: "proportional",
               showSlider: "mouseover",
             },
@@ -223,51 +295,66 @@ export function Editor({
             formatOnType: true,
             formatOnPaste: true,
             wordWrap: "on",
-            lineNumbers: "on",
+            lineNumbers: isMobile ? "off" : "on", // Simpler UI on mobile
             scrollBeyondLastLine: false,
             smoothScrolling: true,
             cursorBlinking: "smooth",
             cursorSmoothCaretAnimation: "on",
             bracketPairColorization: { enabled: true },
             guides: {
-              bracketPairs: "active",
-              indentation: true,
+              bracketPairs: isMobile ? false : "active", // Simpler UI on mobile
+              indentation: !isMobile,
             },
             hover: { delay: 200 },
             renderLineHighlight: "all",
             suggest: {
-              preview: true,
+              preview: !isMobile,
               showWords: true,
-              showStatusBar: true,
+              showStatusBar: !isMobile,
             },
             padding: { top: 10 },
-            fontLigatures: true,
+            fontLigatures: !isMobile, // Disable font ligatures on mobile for better performance
             fontFamily: "'Fira Code', 'Consolas', 'Courier New', monospace",
-            fontSize: 14,
+            fontSize: isMobile ? 13 : 14, // Slightly smaller font on mobile
             lineHeight: 1.5,
+            fixedOverflowWidgets: true, // Fix for suggestions popup on mobile
+            overviewRulerBorder: false, // Cleaner UI
+            scrollbar: {
+              vertical: "visible",
+              horizontal: "visible",
+              verticalScrollbarSize: isMobile ? 12 : 10, // Larger scrollbar for touch
+              horizontalScrollbarSize: isMobile ? 12 : 10,
+            },
+            parameterHints: {
+              enabled: !isMobile, // Disable parameter hints on mobile
+            },
           }}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
         />
       </div>
 
-      {/* Status bar */}
+      {/* Status bar - simplified on mobile */}
       <div className="h-6 bg-black/40 border-t border-white/10 text-xs text-muted-foreground flex items-center px-2 justify-between">
         <div className="flex items-center space-x-3">
           <div className="flex items-center space-x-1">
             <Code2 className="h-3 w-3" />
             <span>{languageInfo}</span>
           </div>
-          <div className="flex items-center space-x-1">
-            <Info className="h-3 w-3" />
-            <span>{lineCount} lines</span>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center space-x-1">
+              <Info className="h-3 w-3" />
+              <span>{lineCount} lines</span>
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-3">
-          <div className="flex items-center space-x-1">
-            <CheckCircle2 className="h-3 w-3 text-green-500" />
-            <span>Synced</span>
-          </div>
+          {!isMobile && (
+            <div className="flex items-center space-x-1">
+              <CheckCircle2 className="h-3 w-3 text-green-500" />
+              <span>Synced</span>
+            </div>
+          )}
           <div>
             Ln {cursorPosition.line}, Col {cursorPosition.column}
           </div>

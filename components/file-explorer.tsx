@@ -58,6 +58,7 @@ export function FileExplorer({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const initialized = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   const refreshFiles = useCallback(() => {
     const allFiles = fileSystem.getFiles();
@@ -119,6 +120,20 @@ export function FileExplorer({
       unsubscribe();
     };
   }, [refreshFiles]);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+    };
+  }, []);
 
   const toggleFolder = (folderId: string, event: React.MouseEvent) => {
     event.stopPropagation();
@@ -287,7 +302,8 @@ export function FileExplorer({
                 isSelected && "bg-accent/80 text-accent-foreground",
                 isDraggedOver &&
                   "bg-accent/40 border border-dashed border-primary",
-                level > 0 && "ml-4"
+                level > 0 && `ml-${isMobile ? 2 : 4}`,
+                isMobile && "py-2.5" // Bigger touch target on mobile
               )}
               onClick={() => node.type === "file" && onFileSelect(node)}
               draggable={true}
@@ -300,12 +316,25 @@ export function FileExplorer({
                 {node.type === "folder" && (
                   <button
                     onClick={(e) => toggleFolder(node.id, e)}
-                    className="mr-1 hover:bg-accent rounded-sm"
+                    className={cn(
+                      "mr-1 hover:bg-accent rounded-sm",
+                      isMobile && "p-1" // Larger touch target for folder toggle
+                    )}
                   >
                     {isExpanded ? (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      <ChevronDown
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground",
+                          isMobile && "h-5 w-5"
+                        )}
+                      />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      <ChevronRight
+                        className={cn(
+                          "h-4 w-4 text-muted-foreground",
+                          isMobile && "h-5 w-5"
+                        )}
+                      />
                     )}
                   </button>
                 )}
@@ -313,16 +342,20 @@ export function FileExplorer({
                   <img
                     src={getFolderIcon(node.name, isExpanded)}
                     alt="folder"
-                    className="h-4 w-4 mr-2"
+                    className={cn("h-4 w-4 mr-2", isMobile && "h-5 w-5")}
                   />
                 ) : (
                   <img
                     src={getFileIcon(node.name)}
                     alt="file"
-                    className="h-4 w-4 mr-2"
+                    className={cn("h-4 w-4 mr-2", isMobile && "h-5 w-5")}
                   />
                 )}
-                <span className="text-sm truncate">{node.name}</span>
+                <span
+                  className={cn("text-sm truncate", isMobile && "text-base")}
+                >
+                  {node.name}
+                </span>
               </div>
             </div>
           </ContextMenuTrigger>
@@ -333,15 +366,16 @@ export function FileExplorer({
                 setDialogType("rename");
                 setDialogOpen(true);
               }}
+              className={isMobile ? "py-2" : ""}
             >
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit className={cn("h-4 w-4 mr-2", isMobile && "h-5 w-5")} />
               Rename
             </ContextMenuItem>
             <ContextMenuItem
               onClick={() => handleDelete(node)}
-              className="text-red-600"
+              className={cn("text-red-600", isMobile && "py-2")}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className={cn("h-4 w-4 mr-2", isMobile && "h-5 w-5")} />
               Delete
             </ContextMenuItem>
             {node.type === "folder" && (
@@ -351,8 +385,9 @@ export function FileExplorer({
                   setDialogType("create");
                   setDialogOpen(true);
                 }}
+                className={isMobile ? "py-2" : ""}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className={cn("h-4 w-4 mr-2", isMobile && "h-5 w-5")} />
                 New File/Folder
               </ContextMenuItem>
             )}
@@ -373,23 +408,27 @@ export function FileExplorer({
 
   return (
     <div className="h-full flex flex-col bg-background/70 backdrop-blur-sm">
-      <div className="p-2 border-b flex flex-col gap-2">
+      <div
+        className={cn("p-2 border-b flex flex-col gap-2", isMobile && "p-3")}
+      >
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-medium">Files</h3>
+          <h3 className={cn("text-sm font-medium", isMobile && "text-base")}>
+            Files
+          </h3>
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-6 w-6"
+            className={cn("ml-auto h-6 w-6", isMobile && "h-8 w-8")}
             onClick={refreshFiles}
             title="Refresh"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
+            <RefreshCw className={cn("h-3.5 w-3.5", isMobile && "h-4 w-4")} />
           </Button>
         </div>
         {isSearching ? (
           <div className="flex items-center gap-1">
             <Input
-              className="h-8 text-xs"
+              className={cn("h-8 text-xs", isMobile && "h-10 text-sm")}
               placeholder="Search files..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -398,13 +437,13 @@ export function FileExplorer({
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className={cn("h-8 w-8", isMobile && "h-10 w-10")}
               onClick={() => {
                 setIsSearching(false);
                 setSearchQuery("");
               }}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className={cn("h-4 w-4", isMobile && "h-5 w-5")} />
             </Button>
           </div>
         ) : (
@@ -412,29 +451,34 @@ export function FileExplorer({
             <Button
               variant="outline"
               size="sm"
-              className="w-full h-8 flex items-center justify-between"
+              className={cn(
+                "w-full h-8 flex items-center justify-between",
+                isMobile && "h-10 text-sm"
+              )}
               onClick={() => {
                 setSelectedNode(null);
                 setDialogType("create");
                 setDialogOpen(true);
               }}
             >
-              <span className="text-xs">New File/Folder</span>
-              <Plus className="h-3.5 w-3.5 ml-1" />
+              <span className={cn("text-xs", isMobile && "text-sm")}>
+                New File/Folder
+              </span>
+              <Plus className={cn("h-3.5 w-3.5 ml-1", isMobile && "h-4 w-4")} />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className={cn("h-8 w-8", isMobile && "h-10 w-10")}
               onClick={() => setIsSearching(true)}
             >
-              <Search className="h-4 w-4" />
+              <Search className={cn("h-4 w-4", isMobile && "h-5 w-5")} />
             </Button>
           </div>
         )}
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-2">{renderedFiles}</div>
+        <div className={cn("p-2", isMobile && "p-3")}>{renderedFiles}</div>
       </ScrollArea>
       <FileDialog
         open={dialogOpen}
