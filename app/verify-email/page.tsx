@@ -21,7 +21,7 @@ import {
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { sendVerificationEmail } from "@/lib/send-verification-email";
+import { sendEmail } from "@/lib/send-email";
 import emailjs from "@emailjs/browser";
 
 // Loading component for Suspense fallback
@@ -179,10 +179,11 @@ function VerifyEmailContent() {
       }
 
       // Use the fetched data to send a new verification email with EmailJS
-      await sendVerificationEmail({
-        firstName: userData.firstName,
+      await sendEmail({
+        userName: userData.userName,
         email,
-        verifyToken: userData.verifyToken,
+        link: userData.verificationUrl,
+        template_id: process.env.NEXT_PUBLIC_EMAILJS_VERIFY_TEMPLATE_ID || "",
       });
 
       setResendSuccess(true);

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import User from "@/models/userModel";
 import { connectDB } from "@/config/dbConfig";
 import crypto from "crypto";
-import { sendVerificationEmail } from "@/lib/send-verification-email";
 
 // Handle GET requests to verify email
 export async function GET(request: NextRequest) {
@@ -12,7 +11,10 @@ export async function GET(request: NextRequest) {
     const email = url.searchParams.get("email");
 
     if (!verifyToken || !email) {
-      return NextResponse.json({ error: "Missing email or verification token" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Missing email or verification token" },
+        { status: 400 }
+      );
     }
 
     await connectDB();
@@ -26,17 +28,26 @@ export async function GET(request: NextRequest) {
 
     // If already verified, return success
     if (user.isVerified) {
-      return NextResponse.json({ message: "Email already verified" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Email already verified" },
+        { status: 200 }
+      );
     }
 
     // Check if token matches and hasn't expired
     // Be more lenient with token expiration - only check if token matches
     if (user.verifyToken !== verifyToken) {
-      return NextResponse.json({ error: "Invalid verification token" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Invalid verification token" },
+        { status: 400 }
+      );
     }
 
     // Token expiry check with more helpful error message
-    if (user.verifyTokenExpiry && new Date(user.verifyTokenExpiry) < new Date()) {
+    if (
+      user.verifyTokenExpiry &&
+      new Date(user.verifyTokenExpiry) < new Date()
+    ) {
       // Generate a new token for the user
       const newVerifyToken = crypto.randomBytes(32).toString("hex");
       user.verifyToken = newVerifyToken;
@@ -44,11 +55,14 @@ export async function GET(request: NextRequest) {
       await user.save();
 
       // Return a specific error that indicates token is expired but a new one has been generated
-      return NextResponse.json({ 
-        error: "Verification token has expired", 
-        tokenExpired: true,
-        newTokenGenerated: true 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: "Verification token has expired",
+          tokenExpired: true,
+          newTokenGenerated: true,
+        },
+        { status: 400 }
+      );
     }
 
     // Update user verification status
@@ -57,10 +71,16 @@ export async function GET(request: NextRequest) {
     user.verifyTokenExpiry = undefined;
     await user.save();
 
-    return NextResponse.json({ message: "Email verified successfully" }, { status: 200 });
+    return NextResponse.json(
+      { message: "Email verified successfully" },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Email verification error:", error);
-    return NextResponse.json({ error: "Failed to verify email" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to verify email" },
+      { status: 500 }
+    );
   }
 }
 
@@ -84,10 +104,13 @@ export async function POST(request: NextRequest) {
 
     // If already verified, return success
     if (user.isVerified) {
-      return NextResponse.json({ 
-        isVerified: true,
-        message: "Email is already verified" 
-      }, { status: 200 });
+      return NextResponse.json(
+        {
+          isVerified: true,
+          message: "Email is already verified",
+        },
+        { status: 200 }
+      );
     }
 
     // Generate a new verification token
@@ -97,15 +120,21 @@ export async function POST(request: NextRequest) {
     await user.save();
 
     // Return user data needed for sending verification email
-    return NextResponse.json({
-      isVerified: false,
-      firstName: user.firstName,
-      email: user.email,
-      verifyToken: verifyToken,
-      message: "New verification token generated"
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        isVerified: false,
+        userName: user.firstName + " " + user.lastName,
+        email: user.email,
+        verificationUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(user.email)}`,
+        message: "New verification token generated",
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Resend verification error:", error);
-    return NextResponse.json({ error: "Failed to process verification request" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to process verification request" },
+      { status: 500 }
+    );
   }
 }

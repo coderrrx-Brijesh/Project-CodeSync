@@ -55,16 +55,16 @@ export async function POST(request: NextRequest) {
 
     // Save user to database
     await newUser.save();
-
+    const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/verify-email?token=${verifyToken}&email=${encodeURIComponent(email)}`;
     // Return success without exposing the token directly in the response
     return NextResponse.json(
-      { 
-        message: "Registration successful! Please verify your email.", 
+      {
+        message: "Registration successful! Please verify your email.",
         firstName,
         email,
-        verifyToken,
+        verificationUrl,
         requiresVerification: true,
-        success: true
+        success: true,
       },
       { status: 201 }
     );

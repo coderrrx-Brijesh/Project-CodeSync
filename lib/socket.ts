@@ -63,7 +63,7 @@ class SocketManager {
 
   connect(): Socket {
     if (!this.socket) {
-      this.socket = io("https://codesync-websocket-server.onrender.com", {
+      this.socket = io(process.env.NEXT_PUBLIC_BASE_URL, {
         transports: ["websocket", "polling"],
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
@@ -137,7 +137,7 @@ class SocketManager {
           this.socket.io.engine.transport.close();
         }
         this.socket.disconnect();
-        this.socket = io("https://codesync-websocket-server.onrender.com", {
+        this.socket = io(process.env.NEXT_PUBLIC_BASE_URL, {
           transports: ["websocket", "polling"],
           reconnectionAttempts: Infinity,
           reconnectionDelay: 1000,

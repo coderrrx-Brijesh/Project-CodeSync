@@ -5,17 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { ArrowRight, Mail, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+import {
+  ArrowRight,
+  Mail,
+  AlertCircle,
+  CheckCircle2,
+  ArrowLeft,
+} from "lucide-react";
 import Link from "next/link";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { useRouter } from "next/navigation";
+import { sendEmail } from "@/lib/send-email";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -28,25 +34,33 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-    
+
     try {
       // Call the real API endpoint for password reset request
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
-      
       const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send reset link');
+        throw new Error(data.error || "Failed to send reset link");
       }
-      
+      await sendEmail({
+        userName: data.userName,
+        email: data.email,
+        link: data.link,
+        template_id: process.env.NEXT_PUBLIC_EMAILJS_RESET_TEMPLATE_ID || "",
+      });
+      // Server-side now handles sending the email automatically
+      console.log("Password reset request successful");
+
       // Show success state
       setSuccess(true);
     } catch (err: any) {
-      setError(err.message || "An unexpected error occurred. Please try again.");
+      setError(
+        err.message || "An unexpected error occurred. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
@@ -83,14 +97,14 @@ export default function ForgotPasswordPage() {
         variants={containerVariants}
         className="w-full max-w-md space-y-6"
       >
-        <Link 
-          href="/signin" 
+        <Link
+          href="/signin"
           className="inline-flex items-center text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to sign in
         </Link>
-        
+
         <motion.div variants={itemVariants} className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Reset password</h1>
           <p className="text-muted-foreground">
@@ -108,8 +122,8 @@ export default function ForgotPasswordPage() {
             </CardHeader>
             <CardContent>
               {error && (
-                <motion.div 
-                  initial={{ opacity: 0, y: -10 }} 
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   className="mb-4 p-3 rounded-md bg-destructive/10 text-destructive flex gap-2 items-start"
                 >
@@ -117,7 +131,7 @@ export default function ForgotPasswordPage() {
                   <span>{error}</span>
                 </motion.div>
               )}
-              
+
               {success ? (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -129,12 +143,13 @@ export default function ForgotPasswordPage() {
                   </div>
                   <h3 className="text-xl font-semibold">Check your email</h3>
                   <p className="text-muted-foreground">
-                    We've sent a password reset link to <span className="font-medium">{email}</span>. 
-                    Please check your inbox and spam folder.
+                    We've sent a password reset link to{" "}
+                    <span className="font-medium">{email}</span>. Please check
+                    your inbox and spam folder.
                   </p>
                   <p className="text-sm text-muted-foreground mt-2">
                     Didn't receive the email? Check your spam folder or{" "}
-                    <button 
+                    <button
                       onClick={() => {
                         setSuccess(false);
                         setEmail("");
@@ -164,16 +179,20 @@ export default function ForgotPasswordPage() {
                       />
                     </div>
                   </div>
-                  
-                  <Button 
-                    type="submit" 
-                    className="w-full font-medium" 
+
+                  <Button
+                    type="submit"
+                    className="w-full font-medium"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <motion.div
                         animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        transition={{
+                          duration: 1,
+                          repeat: Infinity,
+                          ease: "linear",
+                        }}
                         className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"
                       />
                     ) : (

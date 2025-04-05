@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 
-// This endpoint handles the server-side verification email requests
+// This endpoint handles the server-side password reset email requests
 // It returns a simple HTML page with a script that uses EmailJS on the client side
 export async function POST(request: NextRequest) {
   try {
-    const { firstName, email, verificationUrl } = await request.json();
+    const { firstName, email, resetUrl } = await request.json();
 
     // Validate all required fields
-    if (!firstName || !email || !verificationUrl) {
+    if (!firstName || !email || !resetUrl) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -20,11 +20,11 @@ export async function POST(request: NextRequest) {
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Sending Verification Email</title>
+          <title>Sending Password Reset Email</title>
           <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
         </head>
         <body>
-          <div id="status">Sending verification email...</div>
+          <div id="status">Sending password reset email...</div>
           
           <script type="text/javascript">
             (function() {
@@ -32,29 +32,30 @@ export async function POST(request: NextRequest) {
               
               emailjs.send(
                 "${process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID}",
-                "${process.env.NEXT_PUBLIC_EMAILJS_VERIFY_TEMPLATE_ID}",
+                "${process.env.NEXT_PUBLIC_EMAILJS_RESET_TEMPLATE_ID}",
                 {
                   to_email: "${email}",
                   to_name: "${firstName}",
-                  verification_url: "${verificationUrl}"
+                  reset_link: "${resetUrl}",
+                  user_name: "${firstName}"
                 }
               ).then(
                 function(response) {
-                  document.getElementById("status").textContent = "Email sent successfully!";
+                  document.getElementById("status").textContent = "Password reset email sent successfully!";
                   document.getElementById("result").textContent = JSON.stringify(response);
                   fetch("/api/email/verification-sent", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ success: true, email: "${email}", type: "verification" })
+                    body: JSON.stringify({ success: true, email: "${email}", type: "reset-password" })
                   });
                 },
                 function(error) {
-                  document.getElementById("status").textContent = "Failed to send email.";
+                  document.getElementById("status").textContent = "Failed to send password reset email.";
                   document.getElementById("result").textContent = JSON.stringify(error);
                   fetch("/api/email/verification-sent", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ success: false, error: error, type: "verification" })
+                    body: JSON.stringify({ success: false, error: error, type: "reset-password" })
                   });
                 }
               );
@@ -66,14 +67,13 @@ export async function POST(request: NextRequest) {
       </html>
       `,
       {
-        status: 200,
         headers: {
           "Content-Type": "text/html",
         },
       }
     );
   } catch (error: any) {
-    console.error("Error in email/send-verification:", error);
+    console.error("Error in send-password-reset:", error);
     return NextResponse.json(
       { error: error.message || "Internal server error" },
       { status: 500 }

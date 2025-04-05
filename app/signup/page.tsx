@@ -35,7 +35,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Checkbox } from "@/components/ui/checkbox";
-import { sendVerificationEmail } from "@/lib/send-verification-email";
+import { sendEmail } from "@/lib/send-email";
 
 export default function SignUpPage() {
   const [firstName, setFirstName] = useState("");
@@ -123,10 +123,11 @@ export default function SignUpPage() {
       // Send verification email
       try {
         console.log("Sending verification email: ", data);
-        const emailResponse = await sendVerificationEmail({
-          firstName: data.firstName,
+        const emailResponse = await sendEmail({
+          userName: data.firstName + " " + data.lastName,
           email: data.email,
-          verifyToken: data.verifyToken,
+          link: data.verificationUrl,
+          template_id: process.env.NEXT_PUBLIC_EMAILJS_VERIFY_TEMPLATE_ID || "",
         });
         console.log("Email response: ", emailResponse);
       } catch (emailError) {
