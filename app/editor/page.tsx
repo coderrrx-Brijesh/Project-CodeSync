@@ -40,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import Link from "next/link";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
@@ -279,18 +280,17 @@ export default function EditorPage() {
       <header className="border-b bg-background/80 backdrop-blur-md">
         <div className="flex items-center justify-between p-2">
           <div className="flex items-center">
-            <div className="flex items-center mr-4">
-              <Code2 className="h-5 w-5 text-primary mr-2" />
-              <h1 className="text-lg font-semibold">CodeSync</h1>
+            <div className="flex flex-col items-center mr-4">
+              <Link href="/" className="flex items-center">
+                <Code2 className="h-5 w-5 text-primary mr-2" />
+                <h1 className="text-lg font-semibold">CodeSync</h1>
+              </Link>
             </div>
-
             {/* Language selector */}
             <Select value={selectedLanguage} onValueChange={setSelectedLanguage} defaultValue="python">
-
               <SelectTrigger className="h-8 text-xs w-[80px] md:w-[130px]"aria-label="Select Language">
                 <SelectValue placeholder="Select Language" />
               </SelectTrigger>
-
               <SelectContent align="center" side="bottom" sideOffset={8}>
                 <SelectItem value="javascript">JavaScript</SelectItem>
                 <SelectItem value="typescript">TypeScript</SelectItem>
@@ -363,17 +363,6 @@ export default function EditorPage() {
                 >
                   <Paintbrush className="h-4 w-4" />
                   <span className="text-xs font-medium">Cursor</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 md:hidden"
-                  style={{ color: cursorColor }}
-                  title="Change cursor color"
-                >
-                  <Paintbrush className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
