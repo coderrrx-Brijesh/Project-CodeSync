@@ -44,7 +44,7 @@ import Link from "next/link";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
-  const [showTerminal, setShowTerminal] = useState(true);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [showFileExplorer, setShowFileExplorer] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
   const [activeFile, setActiveFile] = useState<FileNode | null>(null);

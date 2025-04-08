@@ -23,11 +23,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-interface ChatBotProps {
-  onClose: () => void;
-}
-
-export function ChatBot({ onClose }: ChatBotProps) {
+export function ChatBot() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome",
@@ -64,27 +60,37 @@ export function ChatBot({ onClose }: ChatBotProps) {
     setInput("");
     setIsLoading(true);
 
-    // Simulate response delay (replace with actual API call)
-    setTimeout(() => {
-      // Sample responses (in a real app, this would be from an API)
-      const responses = [
-        "I can help you with that! Would you like to see some code examples?",
-        "That's a great question about programming. Here's what I know...",
-        "You might want to consider using a different approach. Let me explain...",
-        "Here's a code snippet that might help:\n```javascript\nfunction example() {\n  console.log('Hello world');\n}\n```",
-        "Have you tried debugging your code? Sometimes the simplest errors are the hardest to spot.",
-      ];
+    try {
+      // Include all previous messages in the request for conversation context
+      const conversationHistory = [...messages, userMessage].map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+      }));
 
-      const botMessage: ChatMessage = {
+      const response = await fetch("/api/chatbot", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: conversationHistory,
+        }),
+      });
+
+      const data = await response.json();
+      const assistantMessage: ChatMessage = {
         id: Date.now().toString(),
         role: "assistant",
-        content: responses[Math.floor(Math.random() * responses.length)],
+        content: data.message,
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, botMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
       setIsLoading(false);
-    }, 1000);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setIsLoading(false);
+    }
   };
 
   const copyToClipboard = (text: string, id: string) => {
@@ -131,26 +137,7 @@ export function ChatBot({ onClose }: ChatBotProps) {
   };
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="border-b p-3 flex items-center justify-between bg-card/50">
-        <div className="flex items-center">
-          <Avatar className="h-7 w-7 mr-2 bg-primary/10">
-            <AvatarFallback className="text-primary text-xs">
-              <Bot className="h-3.5 w-3.5" />
-            </AvatarFallback>
-          </Avatar>
-          <h2 className="font-medium text-sm">AI Assistant</h2>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
+    <div className="h-4/5 flex flex-col">
       <ScrollArea className="flex-1 p-3">
         <div className="space-y-4">
           {messages.map((msg) => (

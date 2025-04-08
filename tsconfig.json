@@ -28,6 +28,6 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/api/server/route.ts"
-  ],
+, "app/api/chatbot/route.ts"  ],
   "exclude": ["node_modules"]
 }
