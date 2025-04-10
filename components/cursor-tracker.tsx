@@ -40,11 +40,43 @@ export function CursorTracker() {
     // Listen for cursor position updates from other users
     const handleCursorUpdate = (data: CursorPosition) => {
       if (data.userId !== currentUserId) {
+        // Constrain cursor positions to viewport dimensions to prevent page expansion
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Apply constraints to keep cursor within viewport boundaries
+        const constrainedX = Math.max(0, Math.min(data.x, viewportWidth - 24));
+        const constrainedY = Math.max(0, Math.min(data.y, viewportHeight - 24));
+
         setCursors((prev) => ({
           ...prev,
-          [data.userId]: data,
+          [data.userId]: {
+            ...data,
+            x: constrainedX,
+            y: constrainedY,
+          },
         }));
       }
+    };
+
+    // Listen for window resize events to update cursor constraints
+    const handleResize = () => {
+      setCursors((prev) => {
+        const newCursors = { ...prev };
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        // Update all cursors to stay within new viewport dimensions
+        Object.keys(newCursors).forEach((userId) => {
+          newCursors[userId] = {
+            ...newCursors[userId],
+            x: Math.max(0, Math.min(newCursors[userId].x, viewportWidth - 24)),
+            y: Math.max(0, Math.min(newCursors[userId].y, viewportHeight - 24)),
+          };
+        });
+
+        return newCursors;
+      });
     };
 
     // Listen for when users leave the room
@@ -58,10 +90,12 @@ export function CursorTracker() {
 
     socket.on("cursor-moved", handleCursorUpdate);
     socket.on("user-left", handleUserLeft);
+    window.addEventListener("resize", handleResize);
 
     return () => {
       socket.off("cursor-moved", handleCursorUpdate);
       socket.off("user-left", handleUserLeft);
+      window.removeEventListener("resize", handleResize);
     };
   }, [currentUserId, socket]);
 
