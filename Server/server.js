@@ -239,15 +239,6 @@ io.on("connection", (socket) => {
   });
 });
 
-// Helper: Clean up room if no connected sockets remain
-function cleanupRoomIfEmpty(roomId) {
-  const room = io.sockets.adapter.rooms.get(roomId);
-  if (!room || room.size === 0) {
-    activeRooms.delete(roomId);
-    videoCallUsers.delete(roomId);
-    console.log(`Room ${roomId} cleaned up (no active users)`);
-  }
-}
 
 expressServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
