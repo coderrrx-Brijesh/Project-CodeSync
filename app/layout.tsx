@@ -12,6 +12,27 @@ export const metadata: Metadata = {
   title: "CodeSync - Real-time Collaborative Code Editor",
   description:
     "A state-of-the-art platform for real-time collaborative code editing",
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      {
+        url: "/favicon-static.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    apple: [
+      {
+        url: "/favicon-static.svg",
+        type: "image/svg+xml",
+      },
+    ],
+    other: [
+      {
+        rel: "mask-icon",
+        url: "/favicon-static.svg",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -21,6 +42,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+        <link
+          rel="alternate icon"
+          href="/favicon-static.svg"
+          type="image/svg+xml"
+        />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <ThemeProvider
