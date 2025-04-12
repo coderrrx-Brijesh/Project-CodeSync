@@ -93,7 +93,7 @@ const languageHandlers: Record<
 
     try {
       await fs.promises.writeFile(filePath, code);
-      const { stdout, stderr } = await execPromise(`python "${filePath}"`, {
+      const { stdout, stderr } = await execPromise(`py "${filePath}"`, {
         timeout: 10000,
       });
 
