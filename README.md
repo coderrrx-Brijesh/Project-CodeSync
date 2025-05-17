@@ -17,6 +17,7 @@
 ## 🧠 How It Works
 
 CodeSync uses Node.js’s built-in `child_process` module to:
+
 1. Save the user-submitted code into a temporary file.
 2. Spawn a process to compile (if needed) and execute the file.
 3. Return the output or error.
@@ -27,15 +28,15 @@ This means that **you must have the respective language's compiler/interpreter i
 
 ## 🌐 Supported Languages & Requirements
 
-| Language     | Required to be Installed         | Sample Command Used Internally         |
-|--------------|----------------------------------|----------------------------------------|
-| **C++**      | `g++`                            | `g++ file.cpp -o file && ./file`       |
-| **Python**   | `python3`                        | `python3 file.py`                      |
-| **JavaScript** | `node`                         | `node file.js`                         |
-| **Java**     | `javac`, `java`                  | `javac file.java && java file`         |
-| **Go**       | `go`                             | `go run file.go`                       |
-| **Ruby**     | `ruby`                           | `ruby file.rb`                         |
-| **PHP**      | `php`                            | `php file.php`                         |
+| Language       | Required to be Installed | Sample Command Used Internally   |
+| -------------- | ------------------------ | -------------------------------- |
+| **C++**        | `g++`                    | `g++ file.cpp -o file && ./file` |
+| **Python**     | `python3`                | `python3 file.py`                |
+| **JavaScript** | `node`                   | `node file.js`                   |
+| **Java**       | `javac`, `java`          | `javac file.java && java file`   |
+| **Go**         | `go`                     | `go run file.go`                 |
+| **Ruby**       | `ruby`                   | `ruby file.rb`                   |
+| **PHP**        | `php`                    | `php file.php`                   |
 
 Install them using the following commands (for Linux/macOS):
 
@@ -60,3 +61,4 @@ sudo apt install ruby
 
 # PHP
 sudo apt install php
+```

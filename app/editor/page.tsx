@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import Link from "next/link";
+import Logo from "@/components/logo";
 
 export default function EditorPage() {
   const [showChat, setShowChat] = useState(true);
@@ -272,23 +273,25 @@ export default function EditorPage() {
   }, [username, cursorColor, isClicking]);
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground overflow-hidden">
+    <div className="w-screen h-screen overflow-hidden fixed top-0 left-0 flex flex-col bg-background text-foreground">
       {/* Add cursor tracker for collaborative editing */}
       <CursorTracker />
 
       {/* Header with tabs and controls */}
       <header className="border-b bg-background/80 backdrop-blur-md">
         <div className="flex items-center justify-between p-2">
-          <div className="flex items-center">
-            <div className="flex flex-col items-center mr-4">
-              <Link href="/" className="flex items-center">
-                <Code2 className="h-5 w-5 text-primary mr-2" />
-                <h1 className="text-lg font-semibold">CodeSync</h1>
-              </Link>
-            </div>
+          <div className="flex items-center m-[0.5%] gap-3">
+            <Logo/>
             {/* Language selector */}
-            <Select value={selectedLanguage} onValueChange={setSelectedLanguage} defaultValue="python">
-              <SelectTrigger className="h-8 text-xs w-[80px] md:w-[130px]"aria-label="Select Language">
+            <Select
+              value={selectedLanguage}
+              onValueChange={setSelectedLanguage}
+              defaultValue="python"
+            >
+              <SelectTrigger
+                className="h-8 text-xs w-[80px] md:w-[130px]"
+                aria-label="Select Language"
+              >
                 <SelectValue placeholder="Select Language" />
               </SelectTrigger>
               <SelectContent align="center" side="bottom" sideOffset={8}>
@@ -314,7 +317,6 @@ export default function EditorPage() {
                 <SelectItem value="shell">Shell</SelectItem>
                 <SelectItem value="plaintext">Plain Text</SelectItem>
               </SelectContent>
-              
             </Select>
 
             {/* Run code button */}

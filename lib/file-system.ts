@@ -14,6 +14,11 @@ export interface FileNode {
   extension?: string;
   createdAt: Date;
   updatedAt: Date;
+  // Project metadata (optional, for folders/projects)
+  description?: string;
+  category?: string;
+  isStarred?: boolean;
+  collaborators?: number;
 }
 
 class FileSystem {
@@ -291,7 +296,10 @@ class FileSystem {
       }
       return true;
     }
-    const deleteFromChildren = (children: FileNode[], nodeId: string): boolean => {
+    const deleteFromChildren = (
+      children: FileNode[],
+      nodeId: string
+    ): boolean => {
       const idx = children.findIndex((node) => node.id === nodeId);
       if (idx !== -1) {
         children.splice(idx, 1);
@@ -323,7 +331,10 @@ class FileSystem {
       this.notifyChangeListeners();
       return true;
     }
-    const deleteFromChildren = (children: FileNode[], nodeId: string): boolean => {
+    const deleteFromChildren = (
+      children: FileNode[],
+      nodeId: string
+    ): boolean => {
       const idx = children.findIndex((node) => node.id === nodeId);
       if (idx !== -1) {
         children.splice(idx, 1);

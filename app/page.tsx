@@ -29,10 +29,10 @@ import {
   scrollIndicatorAnimation,
   createCursorAnimation,
 } from "@/lib/animation-types";
-import router from "next/router";
+import Navbar from "@/components/navbar";
 
 export default function Home() {
-  const { data: session, status } = useSession();
+
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/30 overflow-hidden">
@@ -44,29 +44,7 @@ export default function Home() {
       </div>
 
       {/* Nav */}
-      <div className="relative z-10 flex justify-end mt-[2%] mr-[2%] items-start flex-row gap-3">
-        {status === "loading" ? (
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="h-8 w-8 border-4 border-white border-t-transparent rounded-full"
-          />
-        ) : session ? (
-          <ProfileLogo />
-        ) : (
-          <div className="flex flex-row gap-3">
-            <Button className="relative overflow-hidden backdrop-blur-sm border-white/20 hover:border-white/40 transition-all duration-300">
-              <Link href="/signin">Sign In</Link>
-            </Button>
-            <Button
-              variant="outline"
-              className="relative overflow-hidden backdrop-blur-sm border-white/20 hover:border-white/40 transition-all duration-300"
-            >
-              <Link href="/signup">Sign Up</Link>
-            </Button>
-          </div>
-        )}
-      </div>
+      <Navbar/>
 
       {/* Hero Section */}
       <motion.div
@@ -75,24 +53,15 @@ export default function Home() {
         variants={containerVariants}
         className="container mx-auto px-4 py-16 text-center"
       >
-        <motion.div variants={itemVariants} className="relative w-full mb-6">
-          <div className="flex flex-row justify-center">
-            <motion.div
-              animate={logoAnimation.animate}
-              transition={logoAnimation.transition}
-              className="mr-2"
-            >
-              <Code2 className="h-16 w-16 text-primary" />
-            </motion.div>
-            <h1 className="text-5xl sm:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-              CodeSync
-            </h1>
-          </div>
+        <motion.div variants={itemVariants} className="relative w-full mb-16">
+            <div className="relative text-5xl sm:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r inline from-foreground to-foreground/70">
+              Code{<img src="/bolt.svg" className="inline-block h-[100%] w-[10%] -m-8"/>}Sync
+            </div>
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.6, duration: 0.5 }}
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"
+            className="absolute -bottom-[10%] left-[54%] -translate-x-1/2 w-32 h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent"
           />
         </motion.div>
 
@@ -108,7 +77,7 @@ export default function Home() {
           variants={itemVariants}
           className="flex gap-4 justify-center"
         >
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <motion.div >
             <CodeButton />
           </motion.div>
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
